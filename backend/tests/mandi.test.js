@@ -62,7 +62,7 @@ async function db() {
   await pg.exec(migration('001_foundation.sql').replace(/CREATE EXTENSION[^;]*;/, ''));
   await pg.exec(migration('003_market_prices.sql'));
   await pg.exec(migration('010_up_districts.sql'));
-  await pg.exec(migration('012_market_district.sql'));
+  await pg.exec(migration('013_market_district.sql'));
   return { pg, pool: pgPool(pg) };
 }
 

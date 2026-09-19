@@ -22,14 +22,18 @@
 
 /* Trade confirm: one screen, total in large type, typed 2-digit check. */
 .trade-confirm { padding: 4px var(--pad); }
-.trade-what { font-size: calc(var(--fs) * 1.05); }
-.trade-price, .trade-line { font-size: calc(var(--fs) * .85); color: var(--dim); }
-.trade-total { margin: 4px 0; padding: 4px 6px; background: var(--forum-surface-2); border-left: 4px solid var(--forum-accent); }
-.trade-total .big { color: var(--forum-accent); font-size: calc(var(--fs) * 1.7); }
+.trade-what { font-size: calc(var(--fs) * .95); }
+.trade-price, .trade-line { font-size: calc(var(--fs) * .78); color: var(--dim); }
+.trade-total { margin: 3px 0; padding: 2px 6px; background: var(--forum-surface-2); border-left: 4px solid var(--forum-accent); }
+.trade-total .big { color: var(--forum-accent); font-size: calc(var(--fs) * 1.5); }
 .trade-k { font-size: calc(var(--fs) * .75); color: var(--dim); }
 .trade-note { margin-top: 3px; font-size: calc(var(--fs) * .7); color: var(--dim); }
-.trade-check { margin-top: 5px; padding: 4px 6px; border: 2px solid var(--forum-accent); }
-.trade-digits { font-size: calc(var(--fs) * 1.4); letter-spacing: 4px; color: var(--forum-accent); }
+.trade-mandi { margin-top: 2px; padding: 1px 6px; border-left: 4px solid var(--dim); }
+.trade-gap { font-size: calc(var(--fs) * .9); }
+.trade-gap-warn { color: #ffb454; font-weight: 800; }
+.trade-mandi-warn { border-left-color: #ffb454; }
+.trade-check { margin: 3px 0; padding: 2px 6px; border: 2px solid var(--forum-accent); }
+.trade-digits { font-size: calc(var(--fs) * 1.2); letter-spacing: 4px; color: var(--forum-accent); }
 .trade-wrong { border-color: #ff6b62; }
 .trade-wrong .trade-k { color: #ff6b62; }
 @media (max-width: 160px) {

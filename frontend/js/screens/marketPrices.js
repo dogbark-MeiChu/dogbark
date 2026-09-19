@@ -1,6 +1,7 @@
 import { t } from '../i18n/index.js';
 import { getJSON } from '../api.js';
 import { user, identity } from '../state.js';
+import { pricePlace, pointQuery } from '../place.js';
 import { money, h } from '../fmt.js';
 
 // Prices follow the signed-in member: their region (a district resolves to its state on the
@@ -8,11 +9,9 @@ import { money, h } from '../fmt.js';
 // Without a profile it falls back to the fixed demo region.
 let crops = null, cropCoverage = null, cropsFor = null, ci = 0, data = null, error = null, loading = false, lastIdx = 0;
 
-const region = () => identity.profile?.regionCode || user.region;
-const point = () => {
-  const p = identity.profile;
-  return p?.regionLat != null && p?.regionLng != null ? `&lat=${p.regionLat}&lng=${p.regionLng}` : '';
-};
+let place = null; // pricePlace(): the farm's area, else the profile region
+const region = () => place?.region || identity.profile?.regionCode || user.region;
+const point = () => pointQuery(place);
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m) => t(m));
 function dataDate(value) {
@@ -40,6 +39,7 @@ function orderCrops(items) {
 async function load(ctx) {
   loading = true; error = null;
   try {
+    place = await pricePlace();
     if (cropsFor !== region()) {
       cropCoverage = await getJSON(`/api/prices/crops?region=${region()}`);
       crops = orderCrops(cropCoverage.items);
@@ -71,6 +71,8 @@ export default {
   name: 'MarketPrices',
   title: 'Market Prices',
   softCenter: { label: 'Detail' },
+  // Price alerts for the crop on screen: the cloud watches its mandi price.
+  softLeft: { label: 'Alerts', handler: (ctx) => ctx.router.push('PriceAlerts', crops?.length ? { crop: crops[ci] } : {}) },
   initialFocus: () => lastIdx,
   onShow(ctx) {
     if (cropsFor !== region()) { data = null; error = null; } // another member signed in
@@ -100,9 +102,9 @@ export default {
       row.append(h('', label), h('dim', `${money(m.price, data.currency)}/${t('qt')} ${arrow}${when} · ${m.confidence?.grade || 'C'}`));
       wrap.appendChild(row);
     });
-    const place = identity.profile?.regionName || region();
+    const locationName = place?.name || identity.profile?.regionName || region();
     const scope = data.coverage?.state_fallback || cropCoverage?.state_fallback ? t('State coverage') : t('District coverage');
-    wrap.appendChild(h('msg dim', `${place} · ${scope} · ${data.coverage?.market_count || data.markets.length} ${t('mandis')} · ${crops.length} ${t('crops')}`));
+    wrap.appendChild(h('msg dim', `${locationName} · ${scope} · ${data.coverage?.market_count || data.markets.length} ${t('mandis')} · ${crops.length} ${t('crops')}`));
     wrap.appendChild(h('msg dim', data.variety ? `${t('Variety:')} ${data.variety}` : t('Variety not confirmed')));
     wrap.appendChild(h('msg dim', `${t('Latest price:')} ${dataDate(data.date)} · ${sourceLabel(data.source)}`));
     wrap.appendChild(h('msg', `${t('Trend:')} ${trendReason(data.analysis.reason)}`));
@@ -119,6 +121,6 @@ export default {
   onEnter(_el, ctx, i) {
     if (i === 0 || !data) return;
     lastIdx = i;
-    ctx.router.push('PriceDetail', { crop: crops[ci].code, cropLabel: crops[ci].name, market: data.markets[i - 1], home: data.home, region: region() });
+    ctx.router.push('PriceDetail', { crop: crops[ci].code, cropLabel: crops[ci].name, market: data.markets[i - 1], home: data.home, region: region(), place });
   },
 };

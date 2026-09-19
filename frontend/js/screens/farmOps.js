@@ -49,7 +49,7 @@ const weatherRow = (data) => {
     : ['past','beyond'].includes(day.basis) ? '' : tr('No spray task');
   const row=el(`ops-live-row ops-weather ops-${a?.overall||'unknown'}`);
   row.append(el('ops-live-main',main)); if(meta) row.append(el('ops-live-meta',meta));
-  if(data.weather.stale) row.append(sourceLine({provider:'open-meteo',...data.weather}));
+  row.append(sourceLine({provider:'open-meteo',...data.weather})); // every weather reading says its source and age
   return row;
 };
 // One row per farm, for the crops it grows; with several, the row is selectable and Enter shows the next.
@@ -63,13 +63,15 @@ const marketRow = (list) => {
   return row;
 };
 
-const sourceLine = (data) => { const f=freshness(data); return el(`ops-live-meta${f.warn?' ops-stale':''}`,f.text); };
+const sourceLine = (data) => { const f=freshness(data); return el(`ops-live-meta ops-src${f.warn?' ops-stale':''}`,f.text); };
 
 function asyncScreen({ name, title=name, load, renderData, softLeft, onKey, onEnter, initialFocus, numericSelect=false }) {
   let state={ status:'idle', data:null, error:null };
   async function fetchData(ctx) { state={...state,status:'loading',error:null}; ctx.rerender(); try { state={status:'ready',data:await load(ctx),error:null}; } catch(e) { state={...state,status:'error',error:e.message}; } ctx.rerender(); }
   return { name,title,softLeft,numericSelect,softRight:{label:'Back',handler:(ctx)=>ctx.router.pop()},
     onShow(ctx){ if(state.status==='idle') fetchData(ctx); }, onHide(){ state={status:'idle',data:null,error:null}; },
+    // A change from another phone (farmOps/farmSync.js): refetch, keeping the current data on screen meanwhile.
+    onRefresh(ctx){ if(state.status!=='idle') fetchData(ctx); },
     render(ctx){ if(state.status==='loading'&&!state.data)return message('Loading…'); if(state.status==='error')return el('ops-error',`${state.error ? tr(state.error) : tr('Unable to load')} · ${tr('Enter to retry')}`); return state.data?renderData(state.data,ctx):message('Loading…'); },
     initialFocus(ctx){ return initialFocus?.(ctx,state.data); },
     onKey(action,ctx){ if(state.status==='error'&&action==='ENTER'){fetchData(ctx);return true;} return onKey?.(action,ctx,state.data)===true; },
@@ -202,7 +204,7 @@ export const FarmTaskDetail = asyncScreen({ name:'FarmTaskDetail',title:'Task De
   load:(ctx)=>api.detail(ctx.params.id),
   renderData(data){const t=data.item,root=el('ops-page');root.append(el(`ops-priority priority-${t.priority}`,`${tr(t.priority.toUpperCase())} · ${tr(t.type.toUpperCase())}`),el('ops-detail-title',t.title),el('ops-task-meta',`${t.fieldName||tr('No field')} · ${niceDate(t.localDate)}`),el('ops-task-meta',`${STATUS[t.status]||t.status}${t.assignments?.[0]?` · ${t.assignments[0].name}`:''}`));
     const why={blocked:t.blocked_reason,delayed:t.delayed_reason,cancelled:t.cancelled_reason}[t.status];if(why)root.append(el('ops-reason',`${tr(REASON_LABEL[t.status])}: ${tr(why)}`));
-    if(t.description)root.append(el('ops-description',t.description));const spray=data.sprayAssessment;if(spray)spraySection(root,spray);if(data.checklist.length){root.append(el('ops-section-title',`${tr('CHECKLIST')} · ${data.checklist.filter(x=>x.completed_at).length}/${data.checklist.length}`));for(const c of data.checklist){const r=el('item ops-checklist');r.dataset.item=c.id;r.dataset.done=c.completed_at?'1':'';r.textContent=`${c.completed_at?'✓':'□'} ${c.label}`;root.append(r);}}
+    if(t.description)root.append(el('ops-description',t.description));const spray=data.sprayAssessment;if(spray){spraySection(root,spray);if(data.weatherSource)root.append(sourceLine(data.weatherSource));}if(data.checklist.length){root.append(el('ops-section-title',`${tr('CHECKLIST')} · ${data.checklist.filter(x=>x.completed_at).length}/${data.checklist.length}`));for(const c of data.checklist){const r=el('item ops-checklist');r.dataset.item=c.id;r.dataset.done=c.completed_at?'1':'';r.textContent=`${c.completed_at?'✓':'□'} ${c.label}`;root.append(r);}}
     actionRows(root,t);root.append(el('ops-section-title',tr('HISTORY')));data.events.slice(-4).reverse().forEach(e=>root.append(el('ops-history',`${farmTime(e.created_at,farmOps.activeFarm?.timezone)} · ${historyLabel(e)}`)));return root;},
   async onEnter(node,ctx,_i,data){if(detailActionBusy||!node)return;const id=ctx.params.id;
     if(node.dataset.options)return ctx.router.push('ForumPicker',{title:'Task options',options:optionsFor(data.item,farmOps.activeFarm?.role),onPick:(o,c)=>runOption(c,data.item,o.value)});

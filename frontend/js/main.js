@@ -1,7 +1,9 @@
+import './outdoor.js'; // applies outdoor mode before the first screen
 import { initKeypad } from './keypad.js';
 import { createRouter } from './router.js';
 import mainMenu from './screens/mainMenu.js';
 import home from './screens/home.js';
+import { PriceAlerts } from './screens/priceAlerts.js';
 import weather from './screens/weather.js';
 import marketPrices from './screens/marketPrices.js';
 import priceDetail from './screens/priceDetail.js';
@@ -24,6 +26,7 @@ import createReply from './screens/createReply.js';
 import { pickerScreens } from './screens/forumPicker.js';
 import { MyPosts, SavedPosts } from './screens/forumCollections.js';
 import { startMarketSync } from './market/marketSync.js';
+import { startFarmSync } from './farmOps/farmSync.js';
 import { MarketForm, MarketNumber, MarketText } from './market/marketForm.js';
 import { MarketHome, MarketFeed, MarketFilter, MarketDetail } from './market/marketScreens.js';
 import { MarketOffers, MarketOffer, MarketDeals, MarketDeal, MarketReason } from './market/marketTrades.js';
@@ -38,7 +41,7 @@ const farmerCircle = {
 };
 
 const screens = {
-  Home: home, MainMenu: mainMenu, Weather: weather, MarketPrices: marketPrices, PriceDetail: priceDetail, ComingSoon: comingSoon,
+  Home: home, PriceAlerts, MainMenu: mainMenu, Weather: weather, MarketPrices: marketPrices, PriceDetail: priceDetail, ComingSoon: comingSoon,
   AskAIHome: askAIHome, AskAIInput: askAIInput, AskAIThinking: askAIThinking, AskAIAnswer: askAIAnswer,
   AskAISources, AskAIMedia, AskAIPhoto, AskAIVoice, AskAIHistory,
   AuthWelcome, AuthPhone, AuthPin, ProfileName, ProfileVillage, ProfileRegion, AuthResult, Settings, ProfileSummary, LanguageSettings, CropSettings, WelcomeLanguage,
@@ -63,3 +66,4 @@ try {
   router.start('AuthWelcome');
 }
 startMarketSync({ router });
+startFarmSync({ router });

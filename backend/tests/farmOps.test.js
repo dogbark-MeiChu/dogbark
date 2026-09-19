@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { startForum } from './helpers.js';
+import { startForum, makeDb } from './helpers.js';
+import { createAuthService } from '../services/authService.js';
+import { ensureForumReference } from '../db/forumReference.js';
+import { seedDemo } from '../db/forumSeed.js';
 import { seedFarmOps, FARM_DEMO_ID } from '../db/farmOpsSeed.js';
 import { createFarmOpsService } from '../services/farmOpsService.js';
 import { occurrenceDates } from '../services/recurrenceService.js';
@@ -260,4 +263,27 @@ test('tasks can be listed for one member or one field, open ones only', async ()
     const fields = (await t.ops.fields(t.owner, FARM_DEMO_ID)).items;
     assert.equal(fields.find((f) => f.name === 'Field A').cycles[0].variety, 'Swarna');
   } finally { await t.close(); }
+});
+
+// Every phone on a farm sees what the others did within seconds (frontend/js/farmOps/farmSync.js polls this).
+test('sync returns task changes by other members since the cursor, not my own', async () => {
+  const { db, pool } = await makeDb();
+  try {
+    await ensureForumReference(pool);
+    const auth = createAuthService(pool, { AUTH_LOOKUP_SECRET: 'x'.repeat(40), NODE_ENV: 'test' });
+    await seedDemo(pool, { auth, pin: '246810' });
+    await seedFarmOps(pool, { demoDate: '2026-09-19' });
+    const service = createFarmOpsService(pool);
+    const owner = (await auth.login({ phone: '9100000001', pin: '246810' })).user;
+    const worker = (await auth.login({ phone: '9100000002', pin: '246810' })).user;
+    const { cursor } = await service.sync(owner);
+    assert.ok(cursor);
+    const task = (await pool.query(`SELECT t.id FROM app.farm_tasks t WHERE t.farm_id=$1 ORDER BY t.title LIMIT 1`, [FARM_DEMO_ID])).rows[0];
+    await pool.query(`INSERT INTO app.farm_task_events(task_id,actor_user_id,event_type,to_status) VALUES ($1,$2,'status_changed','in_progress')`, [task.id, worker.id]);
+    await pool.query(`INSERT INTO app.farm_task_events(task_id,actor_user_id,event_type,to_status) VALUES ($1,$2,'status_changed','completed')`, [task.id, owner.id]);
+    const r = await service.sync(owner, cursor);
+    assert.deepEqual(r.events.map((e) => [e.kind, e.status, e.actor]), [['status_changed', 'in_progress', 'Asha P.']]);
+    assert.equal((await service.sync(owner, r.cursor)).events.length, 0, 'the cursor moves past what was seen');
+    assert.equal((await service.sync(owner, 'garbage')).events.length, 0);
+  } finally { await db.close(); }
 });

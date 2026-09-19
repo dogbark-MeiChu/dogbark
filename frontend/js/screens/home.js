@@ -3,11 +3,14 @@ import { el, isCompact } from '../dom.js';
 import { getJSON } from '../api.js';
 import { identity, user } from '../state.js';
 import { freshness } from '../freshness.js';
+import { pricePlace, pointQuery } from '../place.js';
 import { marketApi } from '../market/marketApi.js';
 import { money, fmtNum } from '../market/marketUtils.js';
 import * as farmApi from '../farmOps/farmOpsApi.js';
 import { farmToday, selectFarm } from './farmOps.js';
 import { wmo } from './weather.js';
+import { alertsApi, reachedText } from './priceAlerts.js';
+import { toggleOutdoor } from '../outdoor.js';
 
 // Home: the three things a farmer picks up the second phone for, on one screen, each one key away.
 //   1 what the crop is worth today and where it pays most (the price question the app exists for)
@@ -53,14 +56,13 @@ async function loadFarm() {
 
 // Price without a farm: the member's first crop in their region, straight from the mandi data.
 async function loadRegionPrice() {
-  const region = identity.profile?.regionCode || user.region;
+  const pl = await pricePlace();
+  const region = pl.region;
   const crops = (await getJSON(`/api/prices/crops?region=${region}`)).items;
   const mine = identity.profile?.cropCodes || [];
   const crop = crops.find((c) => mine.includes(c.code)) || crops[0];
   if (!crop) throw new Error('No mandi prices for your area yet.');
-  const p = identity.profile;
-  const at = p?.regionLat != null && p?.regionLng != null ? `&lat=${p.regionLat}&lng=${p.regionLng}` : '';
-  const data = await getJSON(`/api/prices?crop=${crop.code}&region=${region}${at}`);
+  const data = await getJSON(`/api/prices?crop=${crop.code}&region=${region}${pointQuery(pl)}`);
   const [home, ...others] = data.markets;
   const best = [...others].sort((a, b) => b.price - a.price)[0];
   return {
@@ -87,7 +89,9 @@ function load(ctx, keep = false) {
   const farm = loadFarm();
   settle(ctx, 'farm', farm);
   // With a farm, its dashboard already carries the price snapshot (net of transport); reuse it.
-  settle(ctx, 'price', farm.then((f) => {
+  // Reached price alerts ride on the price row (the server checks them on this request too).
+  const alerts = alertsApi.list().then((r) => r.items.filter((a) => a.triggered && !a.seen), () => []);
+  settle(ctx, 'price', Promise.all([farm.then((f) => {
     const m = f.today?.marketSnapshots?.[0];
     if (!m) return loadRegionPrice();
     return {
@@ -95,7 +99,7 @@ function load(ctx, keep = false) {
       best: m.bestNearbyMarket && m.netGainPerUnit > 0 ? { market: m.bestNearbyMarket, text: `+${money(m.netGainPerUnit)}/${t('qt')} ${t('net')}` } : null,
       src: m,
     };
-  }, () => loadRegionPrice()));
+  }, () => loadRegionPrice()), alerts]).then(([price, reached]) => ({ ...price, reached })));
   settle(ctx, 'market', loadMarket());
 }
 
@@ -119,9 +123,10 @@ function priceRow() {
   const pct = String(v.change ?? '');
   const arrow = pct.startsWith('-') ? '▼' : Number.parseFloat(pct) > 0 ? '▲' : '';
   const change = pct && pct !== '0' && pct !== '+0%' ? ` ${arrow}${pct}${pct.endsWith('%') ? '' : '%'}` : '';
-  return row(1, 'price', {
+  const hit = v.reached?.[0]; // a price alert the cloud saw reached: it outranks "best mandi"
+  return row(1, 'price', { warn: Boolean(hit),
     main: `${t(v.crop)} ${money(v.price, v.currency)}/${t('qt')}${change}`,
-    meta: v.best ? t(v.best.label || 'Best: {market} {amount}', { market: v.best.market, amount: v.best.text }) : null,
+    meta: hit ? reachedText(hit) : v.best ? t(v.best.label || 'Best: {market} {amount}', { market: v.best.market, amount: v.best.text }) : null,
     src: v.src,
   });
 }
@@ -200,13 +205,13 @@ export default {
     }, CLOCK_MS);
   },
   onHide() { active = false; clearInterval(tick); },
-  onRefresh(ctx) { unanswered += 1; settle(ctx, 'market', loadMarket()); }, // the market poller saw news
+  onRefresh(ctx) { load(ctx, true); }, // the market or farm poller saw news: refresh, keeping the rows on screen
   render() {
     const list = el('list home');
     list.append(priceRow(), marketRow(), farmRow());
     const all = el('item home-row home-all');
     all.dataset.key = 'all';
-    all.append(el('home-n', '0'), el('home-main', t('All features')), el('home-hint', t('# Read aloud')));
+    all.append(el('home-n', '0'), el('home-main', t('All features')), el('home-hint', t('# Read · * Bright')));
     list.append(all);
     return list;
   },
@@ -214,13 +219,14 @@ export default {
   onKey(action, ctx) {
     if (action === 'NUM_0') { go(ctx, 'all'); return true; }
     if (action === 'NUM_4') return true; // 4 is the "All features" row's position, not its key
+    if (action === 'STAR') { toggleOutdoor(); return true; } // * : outdoor (high contrast) mode, one key away in the field
     return false;
   },
   onEnter(node, ctx) { if (node) go(ctx, node.dataset.key); },
 };
 
 function go(ctx, key) {
-  if (key === 'price') return ctx.router.push('MarketPrices');
+  if (key === 'price') return ctx.router.push(rows.price?.reached?.length ? 'PriceAlerts' : 'MarketPrices');
   if (key === 'market') {
     const v = rows.market;
     if (v?.ok && v.waiting.length) return ctx.router.push('MarketOffers', { role: 'incoming' });
