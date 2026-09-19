@@ -47,7 +47,7 @@ docs/  devlog/         規格與開發紀錄（見第 10 節）
 
 ## 3. 功能地圖
 
-登入後的首頁是 **Home**（`frontend/js/screens/home.js`）：1 行情、2 待回覆的出價／進行中的交易、3 農場任務與天氣警示、0 全部功能。每個數字都標出來源與時間（`frontend/js/freshness.js`），上游失敗時顯示伺服器存的舊資料並標橘色。
+登入後的首頁是 **Home**（`frontend/js/screens/home.js`）：1 行情、2 待回覆的出價／進行中的交易、3 農場任務與天氣警示、0 全部功能。每個數字都標出來源與時間（`frontend/js/freshness.js`），上游失敗時顯示伺服器存的舊資料並標橘色。所有價格畫面用同一個地點（`frontend/js/place.js`：農場，否則個人資料的地區）。
 
 全部功能（`frontend/js/screens/mainMenu.js`，從 Home 按 0，數字鍵 1–7）：
 
@@ -61,6 +61,10 @@ docs/  devlog/         規格與開發紀錄（見第 10 節）
 | 6 | Weather | `screens/weather.js` | `GET /api/weather?lat&lng` | `services/weatherService.js` | Open-Meteo，30 分鐘快取，失敗時回舊資料（`stale:true`）|
 | 7 | Settings / 帳號（含「登出其他手機」）| `screens/identity.js` | `/api/auth/*`（`/logout-others`）| `services/authService.js` | migration 004 |
 | — | `#` 朗讀 | `js/tts.js`、`screenText.js` | `POST /api/tts` | `services/ttsService.js` | Google 翻譯取得譯文 → 伺服器產生 MP3（Google，失敗改 Gemini）→ 都失敗時回傳譯文，由手機 `speechSynthesis` 朗讀 |
+| — | 價格提醒 | `screens/priceAlerts.js`（Verified Prices 左軟鍵 Alerts）| `/api/price-alerts` | `services/priceAlertService.js`；`db/syncMandi.js` 同步後檢查 | migration 012 `price_alerts`；樣本價格不觸發 |
+| — | 交易前價格比對 | `market/tradeConfirm.js`、`priceCheck.js`、`priceGap.js` | `/api/prices` | — | 與最近 mandi 比較（kg/ton 換算成 quintal），差 10% 以上標示 |
+| — | 農場多手機同步 | `farmOps/farmSync.js` | `GET /api/farms/sync?since=` | `farmOpsService.sync` | 每 5 秒輪詢 `farm_task_events` |
+| — | 戶外模式（高對比）| `js/outdoor.js`、`css/outdoor.css`（Home `*` 或 Settings）| — | — | 存在這支手機的瀏覽器 |
 | — | 管理 | `backend/admin/` | `/api/admin/*` | `routes/admin.js` | `admin_audit_log` |
 
 ## 4. 後端慣例（改後端前必讀）
@@ -95,6 +99,7 @@ docs/  devlog/         規格與開發紀錄（見第 10 節）
 ## 5. 資料庫
 
 - PostgreSQL，schema `app`；migrations 在 `backend/db/migrations/`，用 `npm run db:migrate`，**以 migrator 角色**執行（不是 app 角色）；版本記在 `app.schema_migrations`。
+- 012 價格提醒（`price_alerts`，每次行情同步後檢查）
 - 001 基礎（regions、users、crops）· 002 早期 marketplace · 003 行情 · 004 身分 / 管理 · 005 論壇 · 006 Local Market · 007 Today's Farm · 008 / 009 地區與市場座標 · 010 北方邦各縣 · 011 價格 snapshot、翻譯快取、專家欄位。
 - 新 migration：編號遞增、檔內自己 `BEGIN/COMMIT`、只加不改舊檔；**套用前先備份**（見 devlog 做法）。
 - 沒有 `DATABASE_URL` 時 server 仍可啟動：行情用 in-memory 樣本、Ask AI 開放；論壇 / 市場 / 農場 / 登入回 503。
@@ -108,11 +113,12 @@ npm run smoke           # 不帶 DB 啟動 server.js 並檢查
 npm run forum:dev       # :3100 論壇 + 市場 + 行情 + 天氣（PGlite，資料在記憶體）
 MANDI_LIVE=1 npm run forum:dev   # 同上，並在背景同步今天的北方邦行情
 npm run farm:dev        # Today's Farm
+npm run demo:dev        # :3103 全部功能 + 即時北方邦行情（demo 彩排用；MANDI_LIVE=0 不連網）
 ```
 
 - demo 帳號與各帳號看得到什麼：見第 7 節。本機 PIN 一律 `246810`。
 - `forum:dev` 會一併建立 Local Market 的 demo 刊登；`farm:dev` 建立 Today's Farm 的 demo 農場（示範日期 2026-09-19）。
-- `.claude/launch.json` 有 `agrilink-dev`（3100）、`farm-dev`（3101）、`prices-live`（3102）。
+- `.claude/launch.json` 有 `demo`（3103，全部功能，demo 彩排用）、`agrilink-dev`（3100）、`farm-dev`（3101）、`prices-live`（3102）。demo 故事帳號：9100000001（Ravi，Lucknow 的 Green Field Cooperative 農場主）。
 - 用 240×320 的視窗測試；128×160 也要看。
 
 ## 7. 有資料的地區、選項與 demo 帳號

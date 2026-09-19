@@ -402,8 +402,10 @@ export function createFarmOpsService(pool, { farmPriceService = null, weatherGet
   // What other members did on my farms since `since` (a cursor from the previous call), so every
   // phone on the farm sees a task change within seconds. Without `since`: just a cursor for now.
   async function sync(user, since) {
-    const cursor = /^\d{4}-\d{2}-\d{2}[ T][\d:.]+([+-]\d{2}(:?\d{2})?|Z)?$/.test(String(since || '')) ? String(since) : null;
-    if (!cursor) return { cursor: (await pool.query('SELECT now()::text c')).rows[0].c, events: [] };
+    const cursor = /^(-infinity|\d{4}-\d{2}-\d{2}[ T][\d:.]+([+-]\d{2}(:?\d{2})?|Z)?)$/.test(String(since || '')) ? String(since) : null;
+    // First call: the newest event so far (not now(): an event written in the same instant would be skipped).
+    if (!cursor) return { cursor: (await pool.query(`SELECT COALESCE(max(e.created_at), '-infinity')::text c FROM app.farm_task_events e
+      JOIN app.farm_tasks t ON t.id=e.task_id JOIN app.farm_members m ON m.farm_id=t.farm_id AND m.user_id=$1 AND m.status='active'`, [user.id])).rows[0].c, events: [] };
     const r = await pool.query(`SELECT e.event_type, e.to_status, e.created_at::text at_text, t.title, p.display_name actor
       FROM app.farm_task_events e JOIN app.farm_tasks t ON t.id=e.task_id
       JOIN app.farm_members m ON m.farm_id=t.farm_id AND m.user_id=$1 AND m.status='active'
