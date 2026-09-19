@@ -89,7 +89,7 @@ const KINDS = {
   },
 };
 
-export function createMarketService({ pool, limiter, env = process.env, config = {} }) {
+export function createMarketService({ pool, limiter, env = process.env, config = {}, reputation = null }) {
   const cfg = { listingsPerHour: 10, offersPerHour: 30, reportsPerDay: 10, ...config };
   const codeSecret = env.MARKET_CODE_SECRET || env.AUTH_LOOKUP_SECRET;
   if (!codeSecret || codeSecret.length < 32) throw new Error('MARKET_CODE_SECRET (or AUTH_LOOKUP_SECRET) must be at least 32 characters.');
@@ -229,11 +229,13 @@ export function createMarketService({ pool, limiter, env = process.env, config =
       out.openOffers = (await q(
         `SELECT count(*)::int n FROM app.market_offers WHERE ${k.offerCol} = $1 AND status IN ('open','countered')`, [id])).rows[0].n;
     } else {
-      // At most one live offer per proposer and target (unique index), so the screen can open it
-      // instead of offering "Make offer" again and hitting CONFLICT.
       out.myOfferId = (await q(
         `SELECT id FROM app.market_offers WHERE ${k.offerCol} = $1 AND proposer_id = $2 AND status IN ('open','countered')`,
         [id, user.id])).rows[0]?.id ?? null;
+    }
+    if (reputation) {
+      const ownerRole = kind === 'listing' ? 'seller' : 'buyer';
+      out.owner.evidence = await reputation.getEvidenceSummary(out.owner.id, ownerRole);
     }
     return { item: out };
   }
@@ -519,8 +521,16 @@ export function createMarketService({ pool, limiter, env = process.env, config =
     const revisions = (await q(
       `SELECT revision_number, proposed_by, quantity, unit_price, pickup_date::text AS pickup_date, payment_method, note, created_at
        FROM app.market_offer_revisions WHERE offer_id = $1 ORDER BY revision_number`, [id])).rows;
+    const item = offerView(row, user);
+    if (reputation) {
+      const cpId = row.proposer_id === user.id ? row.recipient_id : row.proposer_id;
+      const cpRole = row.listing_id
+        ? (row.proposer_id === user.id ? 'seller' : 'buyer')
+        : (row.proposer_id === user.id ? 'buyer' : 'seller');
+      item.counterparty.evidence = await reputation.getEvidenceSummary(cpId, cpRole);
+    }
     return {
-      item: offerView(row, user),
+      item,
       revisions: revisions.map((r) => ({
         revision: r.revision_number, byMe: r.proposed_by === user.id, quantity: num(r.quantity), unitPrice: num(r.unit_price),
         pickupDate: r.pickup_date, paymentMethod: r.payment_method, note: r.note, createdAt: iso(r.created_at),
@@ -712,7 +722,13 @@ export function createMarketService({ pool, limiter, env = process.env, config =
     id = uuid(id, 'Deal');
     const row = (await q(`${DEAL_SELECT} WHERE d.id = $1 AND (d.buyer_id = $2 OR d.seller_id = $2)`, [id, user.id])).rows[0];
     if (!row) throw notFound('Deal');
-    return { item: dealView(row, user) };
+    const item = dealView(row, user);
+    if (reputation) {
+      const cpId = row.buyer_id === user.id ? row.seller_id : row.buyer_id;
+      const cpRole = row.buyer_id === user.id ? 'seller' : 'buyer';
+      item.counterparty.evidence = await reputation.getEvidenceSummary(cpId, cpRole);
+    }
+    return { item };
   }
 
   // ================= safety =================

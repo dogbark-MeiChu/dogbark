@@ -18,6 +18,7 @@ export const DEAL_STATUS = {
   completed: 'Completed', cancelled: 'Cancelled', no_show: 'No show', disputed: 'Disputed',
 };
 export const OFFER_STATUS = { open: 'Open', countered: 'Countered', accepted: 'Accepted', declined: 'Declined', withdrawn: 'Withdrawn', expired: 'Expired' };
+export const EVIDENCE_BAND = { new: 'New member', established: 'Established trader' };
 
 // Numbers keep at most 3 decimals, without trailing zeros.
 export const fmtNum = (n) => String(Number(Number(n).toFixed(3)));
@@ -123,3 +124,10 @@ export const line = (label, value) => {
   d.appendChild(el('market-v', value, 'span'));
   return d;
 };
+export function evidenceLines(evidence) {
+  if (!evidence) return [];
+  const label = EVIDENCE_BAND[evidence.band] || evidence.band;
+  const stars = evidence.avgStars != null ? ` · ${evidence.avgStars}★` : '';
+  const deals = `${evidence.completedDeals} deal${evidence.completedDeals !== 1 ? 's' : ''}`;
+  return [line('Status', label), line('Record', `${deals}${stars}`)];
+}

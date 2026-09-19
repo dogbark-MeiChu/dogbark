@@ -4,12 +4,14 @@ import { AppError, asyncHandler } from '../middleware/errors.js';
 import { sameOriginWrites } from '../middleware/sameOrigin.js';
 import { limitByUser, createLimiter } from '../middleware/rateLimits.js';
 import { createMarketService } from '../services/marketService.js';
+import { createReputationService } from '../services/reputationService.js';
 
 // Local Market API. Every route needs a signed-in member: listings are matched by the poster's
 // profile region, never by request IP. Cookie identity comes from routes/auth.js.
 export function createMarketRouter({ pool, auth, env = process.env, config }) {
   const limiter = createLimiter();
-  const market = createMarketService({ pool, limiter, env, config });
+  const reputation = createReputationService({ pool });
+  const market = createMarketService({ pool, limiter, env, config, reputation });
   const json = express.json({ limit: '8kb' });
   const router = Router();
 
@@ -65,9 +67,12 @@ export function createMarketRouter({ pool, auth, env = process.env, config }) {
   router.post('/reports', json, send((req) => market.report(req.user, req.body || {}), 201));
   router.post('/blocks', json, send((req) => market.block(req.user, req.body || {}), 201));
 
+  router.get('/me/reputation', send((req) => reputation.getReputation(req.user.id, req.query.role || 'seller')));
+  router.get('/users/:userId/reputation', send((req) => reputation.getReputation(req.params.userId, req.query.role || 'seller')));
+
   router.use((_req, _res, next) => next(new AppError('NOT_FOUND', 'Not found.')));
 
   const timer = setInterval(() => { limiter.sweep(); market.expireStale().catch((e) => console.error('market expiry:', e.message)); }, 300000);
   timer.unref();
-  return { router, service: market, close: () => clearInterval(timer) };
+  return { router, service: market, reputation, close: () => clearInterval(timer) };
 }

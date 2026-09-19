@@ -32,15 +32,15 @@ test('market demo seed builds every visible state and is repeatable', async () =
     events: await count(db, 'SELECT count(*)::int n FROM app.market_events'),
   });
   const first = await snap();
-  assert.equal(first.listings, 13);
+  assert.equal(first.listings, 15);
   assert.equal(first.requests, 5);
-  assert.equal(first.offers, 5);
-  assert.equal(first.deals, 2);
+  assert.equal(first.offers, 7);
+  assert.equal(first.deals, 4);
   assert.equal(await count(db, 'SELECT count(*)::int n FROM app.market_listings WHERE NOT is_demo'), 0);
   assert.equal(await count(db, 'SELECT count(*)::int n FROM app.market_buy_requests WHERE NOT is_demo'), 0);
 
   const statuses = (await db.query('SELECT status FROM app.market_deals ORDER BY status')).rows.map((r) => r.status);
-  assert.deepEqual(statuses, ['awaiting_confirmation', 'completed']);
+  assert.deepEqual(statuses, ['awaiting_confirmation', 'completed', 'completed', 'completed']);
   const wheat = (await db.query("SELECT quantity, reserved_quantity, sold_quantity, status FROM app.market_listings l JOIN app.crops c ON c.id=l.crop_id WHERE c.code='wheat' AND asking_price = 2250")).rows[0];
   assert.equal(Number(wheat.sold_quantity), 5);
   assert.equal(Number(wheat.reserved_quantity), 0);
@@ -50,7 +50,7 @@ test('market demo seed builds every visible state and is repeatable', async () =
   const offerStates = (await db.query('SELECT status, current_revision FROM app.market_offers ORDER BY created_at')).rows;
   assert.ok(offerStates.some((o) => o.status === 'countered' && o.current_revision === 2)); // Ravi's turn
   assert.ok(offerStates.some((o) => o.status === 'open')); // waiting for Ravi
-  assert.equal(await count(db, 'SELECT count(*)::int n FROM app.market_ratings'), 2);
+  assert.equal(await count(db, 'SELECT count(*)::int n FROM app.market_ratings'), 6);
 
   // running it again changes nothing
   await seedMarketDemo(pool, { env: ENV });
@@ -66,5 +66,5 @@ test('market demo reset removes all demo market data and it can be seeded again'
   }
   assert.equal(await count(db, "SELECT count(*)::int n FROM app.notifications WHERE type LIKE 'market_%'"), 0);
   await seedMarketDemo(pool, { env: ENV });
-  assert.equal(await count(db, 'SELECT count(*)::int n FROM app.market_deals'), 2);
+  assert.equal(await count(db, 'SELECT count(*)::int n FROM app.market_deals'), 4);
 });

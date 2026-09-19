@@ -27,4 +27,6 @@ export const marketApi = {
   sync: (since) => getApi(`/api/market/sync${qs({ since })}`, { timeout: 6000 }),
   report: (targetType, targetId, reason) => postApi('/api/market/reports', { targetType, targetId, reason }),
   block: (userId) => postApi('/api/market/blocks', { userId }),
+  reputation: (userId, role) => getApi(`/api/market/users/${id(userId)}/reputation${qs({ role })}`),
+  myReputation: (role) => getApi(`/api/market/me/reputation${qs({ role })}`),
 };

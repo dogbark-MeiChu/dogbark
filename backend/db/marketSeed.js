@@ -109,6 +109,47 @@ export async function seedMarketDemo(pool, { env = process.env, now = Date.now()
   // e) Lucknow: Pooja offers on Imran's tomatoes -> waiting for Imran to answer
   await market.offerOnListing(users['Pooja Rawat'], ids['imran-tomato'], { requestId: 'seed-mkt-offer-e', ...terms(80, 16, { note: 'For my shop in Bakshi Ka Talab' }) });
 
+  // -- TruePrice v2 personas: build reputation evidence through completed deals.
+  // Persona 1: "New buyer" — Pooja Rawat has 0 completed deals (natural state).
+  // Persona 2: "Established seller" — Meena S. gets 2 more completed deals (total 3, 3 distinct buyers, all with handover).
+  // Persona 3: "Demo verified FPO" — Asha P. is an FPO with verified_business label on profile.
+  const asha = users['Asha P.'];
+  const pooja = users['Pooja Rawat'];
+  const rakesh = users['Rakesh Tyagi'];
+  const imran = users['Imran Ali'];
+
+  // Extra completed deals for Meena (seller): she already has 1 with Ravi from deal (d).
+  // Add deals with Asha and Imran to reach 3 distinct counterparties.
+  for (const [key, buyer, crop, qty, price] of [
+    ['meena-rep-asha', asha, 'tomato', 30, 28],
+    ['meena-rep-imran', imran, 'tomato', 25, 27],
+  ]) {
+    const listing = await market.createListing(meena, {
+      requestId: `seed-mkt-rep-listing-${key}`, crop, quantity: qty, unit: 'kg',
+      pricingMode: 'negotiable', askingPrice: price, grade: 'A',
+      availableDate: dayOffset(0, now), fulfillment: 'pickup', expiresInHours: 168,
+    });
+    await q('UPDATE app.market_listings SET is_demo = true WHERE id = $1', [listing.id]);
+    const offer = await market.offerOnListing(buyer, listing.id, {
+      requestId: `seed-mkt-rep-offer-${key}`, quantity: qty, unitPrice: price,
+      pickupDate: dayOffset(0, now), pickupWindowStart: '09:00', pickupWindowEnd: '11:00',
+      paymentMethod: 'cash_on_pickup',
+    });
+    if (['open', 'countered'].includes((await offerRow(offer.id)).status)) {
+      await market.accept(meena, offer.id);
+    }
+    let repDeal = await dealOf(offer.id);
+    const buyerUser = buyer;
+    const repStep = async (when, fn) => { if (repDeal.status === when) { await fn(); repDeal = await dealOf(offer.id); } };
+    await repStep('awaiting_confirmation', async () => { await market.confirm(buyerUser, repDeal.id); await market.confirm(meena, repDeal.id); });
+    await repStep('agreed', () => market.schedule(meena, repDeal.id, { pickupDate: dayOffset(0, now), pickupWindowStart: '09:00', pickupWindowEnd: '11:00', location: 'Danapur market gate' }));
+    await repStep('pickup_scheduled', () => market.verifyPickup(meena, repDeal.id, market.pickupCode(repDeal.id)));
+    await repStep('handed_over', async () => { await market.received(buyerUser, repDeal.id); await market.paymentStatus(meena, repDeal.id, 'received'); });
+    if ((await dealOf(offer.id)).status === 'completed') {
+      await q('INSERT INTO app.market_ratings (deal_id, rater_id, ratee_id, stars) VALUES ($1,$2,$3,5), ($1,$3,$2,4) ON CONFLICT DO NOTHING', [repDeal.id, buyerUser.id, meena.id]);
+    }
+  }
+
   // Keep the demo fresh: open demo posts and live offers are pushed forward on every run.
   await q(`UPDATE app.market_listings SET expires_at = now() + interval '7 days', available_date = GREATEST(available_date, current_date), updated_at = now()
            WHERE is_demo AND status IN ('open','partially_reserved','reserved')`);
@@ -116,7 +157,7 @@ export async function seedMarketDemo(pool, { env = process.env, now = Date.now()
            WHERE is_demo AND status IN ('open','partially_reserved')`);
   await q(`UPDATE app.market_offers SET expires_at = now() + interval '7 days' WHERE status IN ('open','countered')
            AND (listing_id = ANY($1::uuid[]))`, [Object.values(ids)]);
-  log(`market demo: ${LISTINGS.length} listings, ${REQUESTS.length} requests, 5 negotiations`);
+  log(`market demo: ${LISTINGS.length + 2} listings, ${REQUESTS.length} requests, 7 negotiations (3 completed for reputation)`);
   return { listings: LISTINGS.length, requests: REQUESTS.length };
 }
 
