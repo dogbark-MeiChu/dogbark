@@ -18,7 +18,7 @@ async function load(ctx) {
   const { crop, market, home, region } = ctx.params;
   try {
     const p = identity.profile;
-    // The same point Verified Prices used for "your area" (the farm's, else the profile's).
+    // The same point Market Prices used for "your area" (the farm's, else the profile's).
     const at = ctx.params.place ? pointQuery(ctx.params.place) : p?.regionLat != null && p?.regionLng != null ? `&lat=${p.regionLat}&lng=${p.regionLng}` : '';
     calc = await getJSON(`/api/prices/net-profit?crop=${crop}&region=${region || user.region}&from=${home || user.homeMarket}&to=${market.code}&qty=${qty}${at}`);
   } catch {
@@ -41,7 +41,7 @@ export default {
     head.style.padding = 'var(--pad)';
     // Daily sync builds the history one day at a time; a one-point "trend" would be noise.
     const trend = market.trend.length > 1 ? t('{bars} last {n} prices', { bars: bars(market.trend), n: market.trend.length }) : t('Trend appears after a few days of prices');
-    head.append(h('', `${t(cropLabel)} @ ${market.name}`), h('dim', trend));
+    head.append(h('', `${t(cropLabel)} @ ${market.name}${market.district && market.district !== market.name ? ` · ${market.district}` : ''}`), h('dim', trend));
     wrap.appendChild(head);
     if (!calc) { wrap.appendChild(h('msg', error || t('Loading…'))); return wrap; }
 

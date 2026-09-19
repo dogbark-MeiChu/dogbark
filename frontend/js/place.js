@@ -2,7 +2,7 @@ import { identity, user } from './state.js';
 import * as farmApi from './farmOps/farmOpsApi.js';
 
 // Where prices are for: the member's farm (its region and point, so "your area" is the mandi
-// nearest the farm), else their profile region. Home, Verified Prices, Net Profit, the trade
+// nearest the farm), else their profile region. Home, Market Prices, Net Profit, the trade
 // price check and price alerts all use this, so they always talk about the same mandi.
 let cached = null; // { key, at, place }
 const TTL = 5 * 60 * 1000;

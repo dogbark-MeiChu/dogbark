@@ -62,6 +62,7 @@ async function db() {
   await pg.exec(migration('001_foundation.sql').replace(/CREATE EXTENSION[^;]*;/, ''));
   await pg.exec(migration('003_market_prices.sql'));
   await pg.exec(migration('010_up_districts.sql'));
+  await pg.exec(migration('013_market_district.sql'));
   return { pg, pool: pgPool(pg) };
 }
 
@@ -89,14 +90,17 @@ test('sync stores mandis under the state, geocodes them, resumes after a rate li
     wheatLimited = false;
     const second = await syncMandi({ pool, client, geocode, crops, progressFile, log: () => {} });
     assert.deepEqual([second.complete, second.pairs], [true, 1]); // rice was not fetched again
-    const markets = (await pg.query(`SELECT m.code, m.name, m.latitude::float8 lat, r.code region FROM app.markets m JOIN app.regions r ON r.id = m.region_id ORDER BY m.code`)).rows;
-    assert.deepEqual(markets.map((m) => [m.name, m.region, m.lat]), [['Meerut', 'IN-UP', 28.98], ['Milak', 'IN-UP', 28.81], ['Rampur', 'IN-UP', 28.81]]);
+    const markets = (await pg.query(`SELECT m.code, m.name, m.district_name, m.latitude::float8 lat, r.code region FROM app.markets m JOIN app.regions r ON r.id = m.region_id ORDER BY m.code`)).rows;
+    assert.deepEqual(markets.map((m) => [m.name, m.district_name, m.region, m.lat]),
+      [['Meerut', 'Meerut', 'IN-UP', 28.98], ['Milak', 'Rampur', 'IN-UP', 28.81], ['Rampur', 'Rampur', 'IN-UP', 28.81]]);
 
     // A member in Meerut district gets live state prices, Meerut first, and one price per mandi/day.
     const prices = createPriceService(pgRepo(pool));
     const d = await prices.getPrices({ crop: 'rice', region: 'IN-UP-MRT', lat: 28.9845, lng: 77.7064 });
     assert.equal(d.region, 'IN-UP');
     assert.equal(d.markets[0].name, 'Meerut');
+    assert.equal(d.markets[0].district, 'Meerut');
+    assert.equal(d.coverage.state_fallback, true);
     assert.equal(d.markets.find((m) => m.name === 'Rampur').price, 3000); // Common, not Basmati
     assert.equal(d.sample, false);
     const crops2 = await prices.getCrops({ region: 'IN-UP-AGR' });
