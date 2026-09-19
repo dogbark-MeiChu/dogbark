@@ -23,7 +23,7 @@ Here is the exact prompt you can copy and paste into an AI (or give back to me) 
 
 **API Integration:**
 You will fetch data using the Open-Meteo API.
-*Endpoint:* `[https://api.open-meteo.com/v1/forecast?latitude=](https://api.open-meteo.com/v1/forecast?latitude=){local_lat}&longitude={local_lon}&daily=weather_code&current=precipitation,temperature_2m&forecast_days=3`
+*Endpoint:* `[https://api.open-meteo.com/v1/forecast?latitude=](https://api.open-meteo.com/v1/forecast?latitude=){local_lat}&longitude={local_lon}&daily=weather_code,percipitation_max&current=temperature_2m&forecast_days=3`
 *(Note: For the purpose of this hackathon code, you can hardcode the `local_lat` and `local_lon` to Taichung City, Taiwan (Lat: 24.14, Lon: 120.67), or write a simple function that allows passing them in).*
 
 * The UI needs to display: Current Temperature, Current Precipitation Probability, and a 3-day forecast mapped from the `daily=weather_code` to simple text/emoji icons (e.g., ☀️, 🌧️, ☁️) to avoid loading external image assets.
