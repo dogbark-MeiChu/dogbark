@@ -131,7 +131,7 @@ function offerActions(ctx, o) {
   if (o.awaitingMyResponse) {
     // Money commitments go through the trade confirm screen (big total, read aloud, type 2 digits).
     acts.push({ label: t('Accept'), run: () => confirmTrade(ctx, {
-      title: 'Accept offer?', verb: 'accept', terms: o.terms, crop: o.crop.name, counterparty: o.counterparty.displayName, role: o.myRole,
+      title: 'Accept offer?', verb: 'accept', terms: o.terms, crop: o.crop.name, cropCode: o.crop.code, counterparty: o.counterparty.displayName, role: o.myRole,
       pickup: { date: o.terms.pickupDate, windowStart: o.terms.pickupWindowStart, windowEnd: o.terms.pickupWindowEnd },
       run: async (c) => { const r = await act(c, () => marketApi.accept(o.id), t('Accepted.')); if (r) c.router.replace('MarketDeal', { id: r.dealId, notice: t('Deal created. Confirm the terms.') }); },
     }) });
@@ -219,7 +219,7 @@ function dealActions(ctx, d) {
   switch (d.status) {
     case 'awaiting_confirmation':
       if (!d.confirmedByMe) acts.push({ label: t('Confirm terms'), run: () => confirmTrade(ctx, {
-        title: 'Confirm these terms?', verb: 'confirm', terms: d.terms, crop: d.crop.name, counterparty: d.counterparty.displayName, role: d.role, pickup: d.pickup,
+        title: 'Confirm these terms?', verb: 'confirm', terms: d.terms, crop: d.crop.name, cropCode: d.crop.code, counterparty: d.counterparty.displayName, role: d.role, pickup: d.pickup,
         run: post('confirm', {}, t('Confirmed.')),
       }) });
       acts.push(cancel);

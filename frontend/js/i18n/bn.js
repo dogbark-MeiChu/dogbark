@@ -972,4 +972,12 @@ export default {
   "Synced {time}": "সিঙ্ক {time}",
   "Syncing…": "সিঙ্ক হচ্ছে…",
   "# Read aloud": "# শুনুন",
+  "Mandi today": "আজ মান্ডি",
+  "Mandi today {price} per quintal.": "আজ মান্ডিতে প্রতি কুইন্টাল {price}।",
+  "{pct}% below the mandi": "মান্ডির চেয়ে {pct}% কম",
+  "{pct}% above the mandi": "মান্ডির চেয়ে {pct}% বেশি",
+  "Same as the mandi": "মান্ডির সমান",
+  "Checking mandi price…": "মান্ডির দাম দেখা হচ্ছে…",
+  "No mandi price to compare.": "তুলনার জন্য মান্ডির দাম নেই।",
+  "Cannot compare a price per {unit}.": "প্রতি {unit} দামের তুলনা করা যায় না।",
 };

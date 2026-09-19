@@ -972,4 +972,12 @@ export default {
   "Synced {time}": "Đồng bộ {time}",
   "Syncing…": "Đang đồng bộ…",
   "# Read aloud": "# Đọc to",
+  "Mandi today": "Chợ hôm nay",
+  "Mandi today {price} per quintal.": "Chợ hôm nay {price} mỗi tạ.",
+  "{pct}% below the mandi": "thấp hơn chợ {pct}%",
+  "{pct}% above the mandi": "cao hơn chợ {pct}%",
+  "Same as the mandi": "Bằng giá chợ",
+  "Checking mandi price…": "Đang kiểm tra giá chợ…",
+  "No mandi price to compare.": "Không có giá chợ để so sánh.",
+  "Cannot compare a price per {unit}.": "Không so sánh được giá mỗi {unit}.",
 };

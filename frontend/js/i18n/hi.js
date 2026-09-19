@@ -972,4 +972,12 @@ export default {
   "Synced {time}": "सिंक {time}",
   "Syncing…": "सिंक हो रहा है…",
   "# Read aloud": "# सुनें",
+  "Mandi today": "आज मंडी",
+  "Mandi today {price} per quintal.": "आज मंडी में {price} प्रति क्विंटल।",
+  "{pct}% below the mandi": "मंडी से {pct}% कम",
+  "{pct}% above the mandi": "मंडी से {pct}% ज़्यादा",
+  "Same as the mandi": "मंडी के बराबर",
+  "Checking mandi price…": "मंडी भाव देख रहे हैं…",
+  "No mandi price to compare.": "तुलना के लिए मंडी भाव नहीं है।",
+  "Cannot compare a price per {unit}.": "प्रति {unit} भाव की तुलना नहीं हो सकती।",
 };

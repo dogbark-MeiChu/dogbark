@@ -59,7 +59,7 @@ export function createFarmOpsService(pool, { farmPriceService = null, weatherGet
   const shapeTask = (t) => ({ ...t, localDate: isoDate(t.local_date), fieldName: t.field_name, cropCode: t.crop_code });
 
   async function farms(user) {
-    const r = await pool.query(`SELECT f.id,f.name,f.timezone,f.country_code,f.region_code,m.role,
+    const r = await pool.query(`SELECT f.id,f.name,f.timezone,f.country_code,f.region_code,m.role,f.latitude::float8 latitude,f.longitude::float8 longitude,
       (SELECT name FROM app.regions WHERE code=f.region_code) region_name,
       (SELECT count(*)::int FROM app.farm_tasks t WHERE t.farm_id=f.id AND t.local_date=(now() AT TIME ZONE f.timezone)::date
        AND t.status NOT IN ('completed','verified','cancelled','skipped')) open_tasks
