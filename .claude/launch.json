@@ -2,6 +2,17 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "demo",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "backend/dev/demoDevServer.js"
+      ],
+      "port": 3103,
+      "env": {
+        "PORT": "3103"
+      }
+    },
+    {
       "name": "agrilink-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": [

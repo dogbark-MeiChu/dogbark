@@ -22,7 +22,8 @@
     "ceda:sync": "node db/syncCeda.js sync",
     "market:seed": "node db/marketSeed.js",
     "farm:seed": "node db/farmOpsSeed.js",
-    "farm:dev": "node dev/farmOpsDevServer.js"
+    "farm:dev": "node dev/farmOpsDevServer.js",
+    "demo:dev": "node dev/demoDevServer.js"
   },
   "dependencies": {
     "ajv": "^8.20.0",
