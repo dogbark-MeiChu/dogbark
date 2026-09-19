@@ -27,7 +27,7 @@ async function load(ctx) {
 
 export default {
   name: 'PriceDetail',
-  title: 'Net Profit',
+  title: 'TruePrice',
   softCenter: { label: '' },
   onShow(ctx) { if (!calc && !loading && !error) load(ctx); },
   onHide() { calc = null; error = null; qty = 5; },
@@ -42,25 +42,35 @@ export default {
     wrap.appendChild(head);
     if (!calc) { wrap.appendChild(h('msg', error || t('Loading…'))); return wrap; }
 
-    const rows = [
+    const best = calc.truePrice?.highestNet;
+    const rows = calc.truePrice?.options?.length && best ? [
+      ...calc.truePrice.options.map((option) => [
+        `${option === best ? t('HIGHEST NET · ') : ''}${option.market}`,
+        `${money(option.economics.estimatedNetPerQt, calc.currency)}/${t('qt')} · ${option.confidence.grade}`,
+      ]),
+      [t('Quantity  ◄ ►'), `${calc.qty} ${t('qt')}`],
+      [t('Gross total'), money(best.economics.grossTotal, calc.currency)],
+      [t('Transport'), signed(-best.economics.breakdown.transport.total, calc.currency)],
+      [t('Commission + fee'), signed(-(best.economics.breakdown.commission.perQt + best.economics.breakdown.marketFee.perQt) * calc.qty, calc.currency)],
+      [t('Handling + packing'), signed(-(best.economics.breakdown.loading.perQt + best.economics.breakdown.weighing.perQt + best.economics.breakdown.packaging.perQt) * calc.qty, calc.currency)],
+      [t('EST. NET TOTAL'), money(best.economics.totalEstimatedNet, calc.currency)],
+      [t('Tomorrow break-even'), `${money(calc.truePrice.breakEven.breakEvenPerQt, calc.currency)}/${t('qt')}`],
+    ] : [
       [t('{name} market', { name: calc.to }), `${money(calc.price_to, calc.currency)}/${t('qt')}`],
       [calc.from_distance_km > 25 ? `${t('Nearest')} · ${calc.from}` : t('Your area'), `${money(calc.price_from, calc.currency)}/${t('qt')}`],
-      // Unknown distance is shown as unknown, never as a free trip.
-      !calc.transport_known ? [t('Transport'), t('not known')]
-        // Both trips start from the member: the extra cost of the longer one.
-        : calc.from_distance_km != null ? [t('Extra trip {a} vs {b}km', { a: calc.distance_km, b: calc.from_distance_km }), `${signed(-calc.transport_per_qt, calc.currency)}/${t('qt')}`]
-          : [t('Transport ~{km}km', { km: calc.distance_km }), `${signed(-calc.transport_per_qt, calc.currency)}/${t('qt')}`],
-      [t(calc.transport_known ? 'Net gain' : 'Gain before transport'), `${signed(calc.gain_per_qt, calc.currency)}/${t('qt')}`],
+      [t('Transport'), t('not known')],
+      [t('Gain before transport'), `${signed(calc.gain_per_qt, calc.currency)}/${t('qt')}`],
       [`${t('For {n} qt', { n: calc.qty })}  ◄ ►`, signed(calc.gain_total, calc.currency)],
     ];
     rows.forEach(([a, b], i) => {
       const r = h('item');
-      r.append(h('', a), h(i >= 3 ? '' : 'dim', b));
+      r.append(h('', a), h(i >= rows.length - 2 ? '' : 'dim', b));
       wrap.appendChild(r);
     });
     wrap.appendChild(h('msg dim', `${t('Price data:')} ${dataDate(calc.price_date)} · ${calc.source === 'agmarknet' ? t('Agmarknet (Govt of India)') : calc.source || t('Database')}`));
     if (!calc.same_day) wrap.appendChild(h('msg', t('Prices are from different days: {a} vs {b}.', { a: dataDate(calc.to_date), b: dataDate(calc.from_date) })));
-    wrap.appendChild(h('msg dim hide-small', `${calc.transport_known ? t('Transport is an estimate.') + ' ' : ''}${t('Before market fees and commission.')}`));
+    wrap.appendChild(h('msg dim hide-small', calc.truePrice?.disclaimer || `${calc.transport_known ? t('Transport is an estimate.') + ' ' : ''}${t('Before market fees and commission.')}`));
+    if (calc.truePrice?.breakEven) wrap.appendChild(h('msg dim', t('No forecast. Break-even is a cost threshold.')));
     return wrap;
   },
   onKey(action, ctx) {

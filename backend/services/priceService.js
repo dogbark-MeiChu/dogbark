@@ -1,3 +1,5 @@
+import { calculateBreakEven, calculateNetPrice, scorePriceConfidence } from './truePriceService.js';
+
 const TRANSPORT_RS_PER_QT_KM = 1.5; // rough freight estimate (assumption, not measured); shown as approximate in the UI
 const ROAD_FACTOR = 1.25;           // road distance vs straight line
 
@@ -127,6 +129,10 @@ export function createPriceService(repo) {
       m.distance_km = hasPoint(origin) && hasPoint(m) ? Math.round(distanceKm(origin, m) * ROAD_FACTOR) : null;
       // Days between this market's latest price and the home market's: compared prices may not be from the same day.
       m.days_from_home = dayGap(m.date, homeMarket.date);
+      m.confidence = scorePriceConfidence({
+        updatedAt: `${m.date}T23:59:59+05:30`, source: m.source, sample: m.sample,
+        observationCount: m.trend.length, varietyMatch: Boolean(byMarket.variety), modalPrice: m.price,
+      });
     }
     // Home first, then by distance (unknown distances last, by name).
     markets.sort((a, b) => (a === homeMarket ? -1 : b === homeMarket ? 1
@@ -153,11 +159,38 @@ export function createPriceService(repo) {
     if (!data) return null;
     const a = data.markets.find((m) => m.code === from), b = data.markets.find((m) => m.code === to);
     if (!a || !b) return null;
+    const legacy = netProfit({ from: a, to: b, qty, here });
+    const economics = (market) => market.distance_km == null ? null : calculateNetPrice({
+      marketPrice: market.price, quantity: qty, distanceKm: market.distance_km,
+      transportMode: 'hired', transitDays: market.distance_km > 50 ? 1 : 0,
+      crop, channel: 'mandi',
+    });
+    const localEconomics = economics(a);
+    const destinationEconomics = economics(b);
+    const ranked = [
+      localEconomics && { market: a.name, marketCode: a.code, economics: localEconomics, confidence: a.confidence, updatedAt: a.date },
+      destinationEconomics && { market: b.name, marketCode: b.code, economics: destinationEconomics, confidence: b.confidence, updatedAt: b.date },
+    ].filter(Boolean).sort((x, y) => y.economics.estimatedNetPerQt - x.economics.estimatedNetPerQt);
+    // A low-confidence source stays visible, but is never promoted as the preferred decision input.
+    const eligible = ranked.filter((option) => option.confidence.decisionEligible);
+    const highestNet = eligible[0] || null;
+    const breakEven = highestNet ? calculateBreakEven({
+      todayNetPerQt: highestNet.economics.estimatedNetPerQt, crop, quantity: qty, delayDays: 1,
+    }) : null;
     return {
-      ...netProfit({ from: a, to: b, qty, here }),
+      ...legacy,
       currency: data.currency, unit: data.unit, sample: data.sample,
       price_date: data.date, source: data.source,
       from_date: a.date, to_date: b.date, same_day: a.date === b.date,
+      truePrice: {
+        options: ranked,
+        highestNet,
+        breakEven,
+        transportKnown: legacy.transport_known,
+        disclaimer: highestNet
+          ? 'Estimated net income, not a guaranteed sale price. Check actual fees and quality at handover.'
+          : 'Transport distance is unavailable, so no net-income recommendation is shown.',
+      },
     };
   }
 
