@@ -967,4 +967,6 @@ export default {
   "Lost a phone? Every other phone signed in to your account is signed out. This phone stays signed in.": "Mất điện thoại? Mọi máy khác đang đăng nhập tài khoản của bạn sẽ bị đăng xuất. Máy này vẫn đăng nhập.",
   "Yes, sign them out": "Có, đăng xuất",
   "Signed out other phones: {n}": "Đã đăng xuất máy khác: {n}",
+  "Verified Prices": "Giá đã xác minh",
+  "Latest verified:": "Xác minh gần nhất:",
 };

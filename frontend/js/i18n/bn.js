@@ -967,4 +967,6 @@ export default {
   "Lost a phone? Every other phone signed in to your account is signed out. This phone stays signed in.": "ফোন হারিয়েছেন? আপনার অ্যাকাউন্টে সাইন ইন থাকা অন্য সব ফোন সাইন আউট হবে। এই ফোনটি সাইন ইন থাকবে।",
   "Yes, sign them out": "হ্যাঁ, সাইন আউট করুন",
   "Signed out other phones: {n}": "সাইন আউট করা অন্য ফোন: {n}",
+  "Verified Prices": "যাচাই করা দাম",
+  "Latest verified:": "সর্বশেষ যাচাই:",
 };
