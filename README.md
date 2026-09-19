@@ -1,58 +1,60 @@
-# 2026dogbark
 # AgriLink
 
-A cloud-phone widget that connects smallholder farmers on feature phones — real-time marketplace, community forum, AI advisory, farm management and verified price data, all navigated by keypad on 240x320 screens.
+AgriLink is a Cloud Phone web app for smallholder farmers using feature phones. It brings official mandi prices, local trading, community support, AI-assisted agricultural guidance and daily farm operations into a keypad-first interface designed for 240×320 screens.
 
-Built for the [CloudMosa](https://cloudmosa.com/) Cloud Phone platform, where full computation runs in the cloud and the handset renders only HTML/CSS/JS. Targets top Cloud Phone markets: India, Vietnam and Bangladesh.
+Built for the [CloudMosa](https://cloudmosa.com/) Cloud Phone platform, AgriLink keeps computation on the server while the handset renders a lightweight HTML/CSS/JavaScript interface. The current live-price pilot covers Uttar Pradesh, India, and five crops. The interface supports English, Hindi, Bengali and Vietnamese; price coverage outside the pilot is not claimed.
 
 ## Features
 
-- **Verified Prices** — Live mandi (wholesale market) prices synced from [data.gov.in](https://data.gov.in/) and CEDA, with TruePrice net-income calculator (transport, commission, spoilage, break-even)
-- **Local Market** — Peer-to-peer buy/sell listings with offers, deals, counterparty reputation and evidence bands
-- **Today's Farm** — Multi-farm task management: scheduling, assignments, checklists, crop cycles, spray-window assessment, weather integration, records
-- **Farmer Circle** — Community forum with posts, tags, replies, collections and moderation
-- **Ask AI** — Gemini-backed agricultural advisor with photo/voice input, offline fallbacks and TTS responses
-- **Weather** — Location-based forecasts for farm planning
-- **Identity** — Phone+PIN auth, multilingual onboarding, user profiles with region and crop preferences
+- **Market Prices** — Latest official mandi prices from Agmarknet via [data.gov.in](https://data.gov.in/), synchronized every 30 minutes. Each record can show location, variety, distance, observation date and an A/B/C confidence grade. TruePrice estimates net proceeds after transport, commission and spoilage, without pretending to predict the future.
+- **Local Market** — Buyer and seller listings, offers, counter-offers, deal tracking, evidence-based reputation and reporting. Payments stay outside the platform; AgriLink records the agreement and handover workflow.
+- **Today's Farm** — Multi-farm tasks, assignments, checklists, crop cycles, weather-aware spray-window assessment and farm records.
+- **Farmer Circle** — Community posts, tags, replies, collections and moderation.
+- **Ask AI** — Gemini-backed agricultural guidance with text, photo and voice input, text-to-speech responses and deterministic provider fallbacks when Gemini is unavailable.
+- **Weather** — Location-based forecasts used as decision inputs for farm planning.
+- **Identity** — Phone-and-PIN authentication, multilingual onboarding and user profiles with regional and crop preferences.
 
 ## Tech Stack
 
-| Layer | Tech |
-|-------|------|
+| Layer | Technology |
+|---|---|
 | Backend | Node.js 22, Express 4 (ESM), PostgreSQL |
-| Frontend | Vanilla JS (no framework), keypad-navigated SPA |
-| AI | Google Gemini API (server-side) |
-| Price Data | AgMarkNet / CEDA sync (systemd timer) |
-| Testing | Node.js built-in test runner, PGlite for DB tests |
-| Deploy | systemd + nginx reverse proxy |
-| CI | GitHub Actions (test + smoke) |
+| Frontend | Vanilla JavaScript, keypad-navigated SPA |
+| AI | Google Gemini API, called server-side |
+| Price data | Agmarknet / data.gov.in production sync; CEDA optional legacy importer |
+| Testing | Node.js test runner, PGlite database tests |
+| Deployment | systemd, nginx reverse proxy, HTTPS |
+| CI | GitHub Actions test and smoke checks |
 
 ## Languages
 
-English, Hindi (हिन्दी), Bengali (বাংলা), Vietnamese (Tiếng Việt)
+English, Hindi (हिन्दी), Bengali (বাংলা) and Vietnamese (Tiếng Việt).
+
+Language support applies to the interface. It does not imply that official market-price feeds are live in every language or country.
 
 ## Project Structure
 
-```
+```text
 backend/
   server.js              # Express entry point
-  routes/                # API route handlers
-    ai.js                #   /api/ai — Ask AI
-    auth.js              #   /api/auth — phone+PIN identity
-    admin.js             #   /api/admin — admin panel
-    farmOps.js           #   /api/farms — Today's Farm
-    forum.js             #   /api/forum — Farmer Circle
-    market.js            #   /api/market — Local Market
-    prices.js            #   /api/prices — verified prices
-    tts.js               #   /api/tts — text-to-speech
-    weather.js           #   /api/weather — forecasts
-  services/              # Business logic (factory+DI pattern)
-  middleware/            # Auth, rate limiting, errors, CSP
+  routes/
+    ai.js                # /api/ai — Ask AI
+    auth.js              # /api/auth — phone+PIN identity
+    admin.js             # /api/admin — administration
+    farmOps.js           # /api/farms — Today's Farm
+    forum.js             # /api/forum — Farmer Circle
+    market.js            # /api/market — Local Market
+    prices.js            # /api/prices — Market Prices
+    tts.js               # /api/tts — text-to-speech
+    weather.js           # /api/weather — forecasts
+  services/              # Business logic using factory/DI patterns
+  middleware/            # Authentication, rate limiting, errors, CSP
   db/
-    migrations/          # 001–011 sequential SQL migrations
+    migrations/          # 001–013 SQL migrations
     pool.js              # PostgreSQL connection pool
     migrate.js           # Migration runner
-  repositories/          # Data access layer
+    syncMandi.js         # Production Agmarknet/data.gov.in importer
+  repositories/          # Data-access layer
 frontend/
   index.html             # SPA shell
   js/
@@ -60,11 +62,11 @@ frontend/
     keypad.js            # Keypad navigation engine
     router.js            # Hash-based SPA router
     i18n/                # Translation dictionaries
-    screens/             # UI screens (one file per screen)
+    screens/             # Feature screens
     market/              # Marketplace UI modules
-  css/                   # Stylesheets (base, layout, per-feature)
-deploy/                  # systemd units, nginx config, setup script
-docs/                    # Specs and runbooks
+  css/                   # Base, layout and feature styles
+deploy/                  # systemd units, nginx configuration, setup script
+docs/                    # Specifications, engineering plans and runbooks
 devlog/                  # Development logs
 ```
 
@@ -72,17 +74,17 @@ devlog/                  # Development logs
 
 ### Prerequisites
 
-- Node.js >= 22
-- PostgreSQL (optional — runs in demo mode without it)
+- Node.js 22 or newer
+- PostgreSQL for persistent production data; the app can start in an in-memory demo mode without it
 
 ### Install and Run
 
 ```bash
 cd backend
-npm install
+npm ci
 ```
 
-**Without a database** (demo mode — in-memory seed data, AI offline fallbacks):
+**Without PostgreSQL** — uses in-memory sample data and deterministic AI provider fallbacks:
 
 ```bash
 npm start
@@ -91,64 +93,95 @@ npm start
 **With PostgreSQL:**
 
 ```bash
-# Set up .env
-cp .env.example .env   # then fill in DATABASE_URL, JWT_SECRET, GEMINI_API_KEY
+cp .env.example .env
 
-# Run migrations
+# Add DATABASE_URL and an AUTH_LOOKUP_SECRET of at least 32 random characters.
+# GEMINI_API_KEY is optional.
 npm run db:migrate
-
-# Seed demo data (optional)
-SEED_DEMO_DATA=true npm start
+npm start
 ```
+
+To seed demo records, follow the guarded demo-data settings in `.env.example`; do not enable demo seeding in a real production dataset.
 
 The server starts on `http://localhost:3000` and serves the frontend as static files.
 
 ### Environment Variables
 
 | Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | No | PostgreSQL connection string. Omit for demo mode. |
-| `JWT_SECRET` | With DB | Secret for session tokens |
-| `GEMINI_API_KEY` | No | Google Gemini API key. Omit for offline AI fallbacks. |
-| `PORT` | No | Server port (default: 3000) |
-| `SEED_DEMO_DATA` | No | Set `true` to seed forum and farm demo data |
+|---|---|---|
+| `DATABASE_URL` | Production | PostgreSQL connection string. Omit only for in-memory demo mode. |
+| `AUTH_LOOKUP_SECRET` | With PostgreSQL | Secret used for protected authentication lookup data; use at least 32 random characters. |
+| `GEMINI_API_KEY` | No | Gemini API key. If absent or unavailable, the server uses deterministic provider fallbacks. |
+| `MANDI_API_KEY` | For official price sync | data.gov.in API key used by the Agmarknet importer. |
+| `PORT` | No | Server port; defaults to `3000`. |
+| `SEED_DEMO_DATA` | No | Enables demo seeding only when its additional safeguards are satisfied. |
+
+Never commit secrets or a populated `.env` file.
 
 ### Tests
 
 ```bash
 cd backend
-npm test        # unit + integration tests (PGlite, no external DB needed)
-npm run smoke   # boots server without DB, checks endpoints
+npm test
+npm run smoke
 ```
 
-### Data Sync
+The test suite includes unit and integration coverage with PGlite. The smoke check starts the server without PostgreSQL and verifies critical endpoints.
 
-Mandi price data is synced from government sources:
+## Market Price Data
+
+The primary production pipeline is:
+
+```text
+Agmarknet / data.gov.in
+        ↓
+backend/db/syncMandi.js
+        ↓
+PostgreSQL app.market_prices
+        ↓
+Price service
+        ↓
+Market Prices, TruePrice and price alerts
+```
+
+Run the production importer manually with:
 
 ```bash
-npm run mandi:sync       # AgMarkNet (data.gov.in)
-npm run ceda:sync        # CEDA prices
+npm run mandi:sync
 ```
 
-In production these run on a systemd timer (see `deploy/`).
+The deployment configuration schedules this sync every 30 minutes. Prices are therefore the latest synchronized official observations, not a real-time exchange feed.
+
+CEDA is retained as a legacy, optional importer for development or historical compatibility:
+
+```bash
+npm run ceda:sync
+```
+
+CEDA is not the primary production price source.
 
 ## Deployment
 
 ```bash
-# On the server (Ubuntu, nginx already configured with HTTPS)
+# Ubuntu server with DNS and HTTPS configured
 bash deploy/setup.sh
 ```
 
-This clones the repo, installs dependencies, sets up the systemd service and mandi sync timer, and configures the nginx reverse proxy.
+The setup script installs dependencies and configures the application service, nginx reverse proxy and mandi synchronization timer. Review the deployment files and environment values before running them on a new server.
 
 ## Architecture Notes
 
-- **Keypad-first UI**: All navigation works with d-pad and number keys (no touch required). Softkey bar at the bottom shows context-sensitive actions.
-- **Progressive feature loading**: Each feature (forum, market, farm ops) is independently gated by its migration. Missing tables disable the feature gracefully, not the whole app.
-- **Factory + DI**: Services are created via factory functions (`createPriceService`, `createMarketRouter`) that receive their dependencies, making them testable with PGlite.
-- **Dual resolution**: CSS adapts between 240x320 and 128x160 Cloud Phone viewports.
-- **CSP hardened**: No inline scripts, no remote resources. Gemini calls are server-side only.
+- **Keypad-first UI** — D-pad, number keys, Enter and softkeys drive navigation; touch is not required.
+- **Primary device target** — 240×320 is the supported target. Compact 128×160 CSS rules are present as a bonus path and still require device-by-device verification.
+- **Graceful feature gating** — Features backed by unavailable tables can be disabled without taking down the entire app.
+- **Factory and dependency injection** — Services receive dependencies through factory functions, supporting isolated tests and PGlite integration tests.
+- **Server-side AI** — Gemini credentials and requests remain on the backend.
+- **Security controls** — Content Security Policy, authentication, validation, rate limiting and centralized error handling protect the public endpoints.
+
+## Scope and Safety
+
+AgriLink is a hackathon prototype, not a regulated financial, medical or pesticide-label authority. Market confidence grades describe the available evidence; they are not guarantees. Weather and AI guidance should be checked against local conditions, product labels and qualified agricultural advice.
 
 ## License
 
-Private repository — all rights reserved.
+This repository is publicly visible for hackathon review. No open-source license is granted; all rights are reserved.
