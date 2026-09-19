@@ -1,6 +1,7 @@
 import { AppError, validation } from '../middleware/errors.js';
 
 export const REPUTATION_POLICY_VERSION = 1;
+export const ADVERSE_OUTCOME_DATA_STATUS = 'not_available';
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -32,10 +33,15 @@ export function countQualifyingDeals(deals) {
 
 export function deriveEvidenceBand(stats) {
   if (stats.restricted) return 'restricted';
+  // P0 has no authoritative adjudication table. A null count is allowed only when the
+  // response explicitly says that confirmed-outcome data is unavailable; once P1 enables
+  // adjudication, a non-zero count blocks the established band.
+  const adverseOutcomeGate = stats.confirmedAdverseOutcomes90d === 0
+    || (stats.confirmedAdverseOutcomes90d == null && stats.adverseOutcomeDataStatus === ADVERSE_OUTCOME_DATA_STATUS);
   return stats.qualifyingDeals >= 3
     && stats.distinctCounterparties >= 3
     && stats.verifiedHandovers >= 1
-    && stats.confirmedAdverseOutcomes90d === 0 ? 'established' : 'new';
+    && adverseOutcomeGate ? 'established' : 'new';
 }
 
 export function buildEvidenceSummary({ role, deals = [], ratings = [], accountStatus = 'active' }) {
@@ -53,8 +59,13 @@ export function buildEvidenceSummary({ role, deals = [], ratings = [], accountSt
     averageRating: ratings.length >= 5
       ? Math.round((ratings.reduce((sum, n) => sum + Number(n), 0) / ratings.length) * 10) / 10
       : null,
-    confirmedAdverseOutcomes90d: 0,
-    underReview: false,
+    // market_reports contains allegations, not an immutable finding or responsible user.
+    // Keep these values unknown until the P1 market_report_reviews workflow exists; never
+    // turn an unreviewed report into a reputation penalty.
+    adverseOutcomeDataStatus: ADVERSE_OUTCOME_DATA_STATUS,
+    confirmedAdverseOutcomes90d: null,
+    underReview: null,
+    bandBasis: 'transaction_evidence_only',
     restricted: accountStatus !== 'active',
   };
   stats.band = deriveEvidenceBand(stats);
