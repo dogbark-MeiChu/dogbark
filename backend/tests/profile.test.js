@@ -50,3 +50,18 @@ test('migration 008 fills missing region coordinates and leaves existing ones', 
   assert.deepEqual(rows, { 'BD-RAJ': [24.3745, 88.6042], 'IN-UP-01': [1, 2], 'XX-OTHER': [null, null] });
   await db.close();
 });
+
+// A lost phone: signing out the others from the phone in hand ends every other session, not this one.
+test('logoutOthers ends the other sessions and keeps the current one', async () => {
+  const t = await startForum();
+  try {
+    const a = await t.auth.login({ phone: '9100000002', pin: '246810' }); // the lost phone
+    const b = await t.auth.login({ phone: '9100000002', pin: '246810' }); // the phone in hand
+    const other = await t.auth.login({ phone: '9100000003', pin: '246810' }); // someone else
+    assert.ok(await t.auth.logoutOthers(b.session.token) >= 1); // the seed signed this member in too
+    assert.equal(await t.auth.session(a.session.token), null);
+    assert.ok(await t.auth.session(b.session.token));
+    assert.ok(await t.auth.session(other.session.token), 'other members are untouched');
+    assert.equal(await t.auth.logoutOthers('not-a-token'), 0);
+  } finally { await t.close(); }
+});

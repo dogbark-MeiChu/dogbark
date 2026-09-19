@@ -1,5 +1,6 @@
 // Open-Meteo proxy with a per-coordinate cache. Free tier is non-commercial only
 // (10k calls/day) and requires CC-BY attribution.
+import { assessSprayConditions } from './sprayAssessment.js';
 const TTL_MS = 30 * 60 * 1000;
 const TIMEOUT_MS = 5000;
 const cache = new Map(); // key -> { at, data }
@@ -71,36 +72,34 @@ export function normalize(raw) {
   };
 }
 
-// Rule-based farm advice from real numbers (no LLM guessing).
+// Spray advice for the Weather screen: the same rules as Today's Farm (services/sprayAssessment.js),
+// so the two screens can never disagree. The worst factor decides; its reason is the one shown.
 export function advise(w) {
-  const today = w.daily[0];
-  const rain3 = w.daily.reduce((s, d) => s + (d.rain_mm || 0), 0);
-  if (today.rain_prob >= 60 || today.rain_mm >= 5) {
-    return { action: 'unsuitable', reason: 'Conditions are unsuitable for spraying: rain is likely.' };
-  }
-  if (today.tmax >= 35 && rain3 < 2) {
-    return { action: 'caution', reason: 'Hot and dry conditions. Review irrigation needs at dawn.' };
-  }
-  if (today.rain_prob < 20) {
-    return { action: 'optimal', reason: 'Conditions are optimal for spraying based on weather data.' };
-  }
-  return { action: 'caution', reason: 'Mixed conditions for spraying. Check the latest weather before work.' };
+  const a = assessSprayConditions(w);
+  const worstFactor = a.factors.find((f) => f.status === 'unsuitable') || a.factors.find((f) => f.status === 'caution');
+  return {
+    action: a.overall,
+    reason: worstFactor?.reason || 'All readings in the good range.',
+    bestWindow: a.bestWindow ? { from: a.bestWindow.from, to: a.bestWindow.to, hours: a.bestWindow.hours } : null,
+  };
 }
 
 export async function getWeather(lat, lng, { fetchImpl = fetch, now = Date.now } = {}) {
   const key = `${lat.toFixed(2)},${lng.toFixed(2)}`;
   const hit = cache.get(key);
-  if (hit && now() - hit.at < TTL_MS) return { ...hit.data, stale: false };
+  const at = (t) => new Date(t).toISOString(); // when the data was fetched, so screens can say how old it is
+  if (hit && now() - hit.at < TTL_MS) return { ...hit.data, stale: false, fetchedAt: at(hit.at) };
 
   try {
     const res = await fetchImpl(buildUrl(lat, lng), { signal: AbortSignal.timeout(TIMEOUT_MS) });
     if (!res.ok) throw new Error(`open-meteo ${res.status}`);
     const data = normalize(await res.json());
     data.advice = advise(data);
-    cache.set(key, { at: now(), data });
-    return { ...data, stale: false };
+    const fetched = now();
+    cache.set(key, { at: fetched, data });
+    return { ...data, stale: false, fetchedAt: at(fetched) };
   } catch (err) {
-    if (hit) return { ...hit.data, stale: true }; // last known good
+    if (hit) return { ...hit.data, stale: true, fetchedAt: at(hit.at) }; // last known good
     throw err;
   }
 }

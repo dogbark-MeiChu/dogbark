@@ -22,7 +22,7 @@ async function options() {
 function enterMain(ctx, profile) {
   identity.profile = profile;
   if (setLanguage(profile.language)) return; // reloads in the member's language
-  ctx.router.replace('MainMenu');
+  ctx.router.replace('Home');
 }
 function editKey(action, tap, ctx, next) {
   if (action.startsWith('NUM_')) { tap.press(Number(action.slice(4))); ctx.rerender(); return true; }
@@ -112,8 +112,8 @@ export const AuthResult = {
 
 export const Settings = {
   name: 'Settings', title: 'Settings', numericSelect: true,
-  render() { const root = el('list'); ['My profile', 'Language', 'My crops', 'Sign out'].forEach((label, i) => root.append(el('item', `${i + 1}  ${t(label)}`))); return root; },
-  onEnter(_el, ctx, i) { if (i === 0) ctx.router.push('ProfileSummary'); else if (i === 1) ctx.router.push('LanguageSettings'); else if (i === 2) ctx.router.push('CropSettings'); else logout(ctx); },
+  render() { const root = el('list'); ['My profile', 'Language', 'My crops', 'Sign out other phones', 'Sign out'].forEach((label, i) => root.append(el('item', `${i + 1}  ${t(label)}`))); return root; },
+  onEnter(_el, ctx, i) { if (i === 0) ctx.router.push('ProfileSummary'); else if (i === 1) ctx.router.push('LanguageSettings'); else if (i === 2) ctx.router.push('CropSettings'); else if (i === 3) confirmLogoutOthers(ctx); else logout(ctx); },
 };
 export const ProfileSummary = {
   name: 'My profile', title: 'My profile',
@@ -148,6 +148,22 @@ export const CropSettings = {
   render() { const root = el('list'); const crops = identity.options?.crops || []; if (!crops.length) { root.append(note(t('Loading crops…'))); return root; } crops.forEach((crop, i) => root.append(el('item', `${i + 1}  ${draft.cropIds.includes(crop.id) ? '✓ ' : ''}${t(crop.name)}`))); return root; },
   onEnter(_el, ctx, i) { const crop = identity.options?.crops?.[i]; if (!crop) return; draft.cropIds = draft.cropIds.includes(crop.id) ? draft.cropIds.filter((id) => id !== crop.id) : [...draft.cropIds, crop.id]; ctx.rerender(); },
 };
+// Phone lost or stolen: sign in on the phone in hand, then end every other session from here.
+function confirmLogoutOthers(ctx) {
+  ctx.router.push('ForumPicker', {
+    title: 'Sign out other phones', note: t('Lost a phone? Every other phone signed in to your account is signed out. This phone stays signed in.'),
+    options: [{ label: t('Yes, sign them out'), value: true }, { label: t('No, go back'), value: false }],
+    async onPick(o, c) {
+      if (!o.value) return c.router.pop();
+      try {
+        const r = await postJSON('/api/auth/logout-others', {});
+        c.router.pop();
+        const toast = document.getElementById('toast'); // the shared status bar, as the market poller uses
+        if (toast) { toast.textContent = `✓ ${t('Signed out other phones: {n}', { n: r.ended })}`; toast.hidden = false; setTimeout(() => { toast.hidden = true; }, 5000); }
+      } catch (err) { c.router.replace('AuthResult', { message: errorText(err), retry: 'Settings' }); }
+    },
+  });
+}
 async function logout(ctx) { try { await postJSON('/api/auth/logout', {}); identity.profile = null; ctx.router.resetTo('AuthWelcome'); } catch (err) { ctx.router.push('AuthResult', { message: errorText(err), retry: 'Settings' }); } }
 
 // Before signing in there is no profile to hold the choice, so it is kept in this browser only.

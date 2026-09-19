@@ -1,6 +1,6 @@
 import { t } from '../i18n/index.js';
 const ITEMS = [
-  { label: 'Market Prices', to: 'MarketPrices' },
+  { label: 'Verified Prices', to: 'MarketPrices' },
   { label: 'Sell / Buy', to: 'MarketHome' },
   { label: 'Farmer Circle', to: 'FarmerCircleHome' },
   { label: 'Ask AI', to: 'AskAIHome' },
@@ -11,7 +11,7 @@ const ITEMS = [
 
 export default {
   name: 'MainMenu',
-  title: 'AgriLink',
+  title: 'All features', // opened from Home (key 0 / Menu)
   numericSelect: true,
   softLeft: { label: '', handler() {} },
   render() {

@@ -3,6 +3,7 @@ import { el } from '../dom.js';
 import { emptyView, loadingView } from '../forum/ui.js';
 import { marketApi } from './marketApi.js';
 import { counterForm, scheduleForm } from './marketForms.js';
+import { confirmTrade } from './tradeConfirm.js';
 import {
   DEAL_STATUS, OFFER_STATUS, PAYMENT_LABEL, appendEvidence, confirm, dateLabel, fmtNum, handleAuth, isRetry, line, marketError, money, perUnit, relTime, timeLeft, row,
   runPending, stateView, windowLabel, refreshScreen,
@@ -64,7 +65,8 @@ const card = (id, head, ...meta) => {
 export const MarketOffers = listScreen({
   name: 'MarketOffers',
   title: 'My offers',
-  fetch: (p) => marketApi.offers(p.role),
+  // Offers waiting for my answer first, so Home's "Offers to answer" lands on one with Enter.
+  fetch: (p) => marketApi.offers(p.role).then((r) => ({ ...r, items: [...r.items].sort((a, b) => b.awaitingMyResponse - a.awaitingMyResponse) })),
   emptyText: (p) => t(p.role === 'outgoing' ? 'You have not sent any offers.' : 'No offers waiting for your answer.'),
   item: (o) => card(o.id, `${o.awaitingMyResponse ? '● ' : ''}${t(o.crop.name)} · ${fmtNum(o.terms.quantity)} ${t(o.terms.unit)}`,
     `${perUnit(o.terms.unitPrice, o.terms.currency, t(o.terms.unit))} · ${o.counterparty.displayName}`,
@@ -127,8 +129,10 @@ function offerActions(ctx, o) {
   const p = ctx.params;
   const acts = [];
   if (o.awaitingMyResponse) {
-    acts.push({ label: t('Accept'), run: () => confirm(ctx, {
-      title: t('Accept offer?'), note: t('{qty} {unit} will be reserved for this deal.', { qty: fmtNum(o.terms.quantity), unit: t(o.terms.unit) }), yes: t('Yes, accept'),
+    // Money commitments go through the trade confirm screen (big total, read aloud, type 2 digits).
+    acts.push({ label: t('Accept'), run: () => confirmTrade(ctx, {
+      title: 'Accept offer?', verb: 'accept', terms: o.terms, crop: o.crop.name, counterparty: o.counterparty.displayName, role: o.myRole,
+      pickup: { date: o.terms.pickupDate, windowStart: o.terms.pickupWindowStart, windowEnd: o.terms.pickupWindowEnd },
       run: async (c) => { const r = await act(c, () => marketApi.accept(o.id), t('Accepted.')); if (r) c.router.replace('MarketDeal', { id: r.dealId, notice: t('Deal created. Confirm the terms.') }); },
     }) });
     acts.push({ label: t('Counter'), run: () => ctx.router.push('MarketForm', counterForm(o, (c) => c.router.pop())) });
@@ -214,7 +218,10 @@ function dealActions(ctx, d) {
   const schedule = (label) => ({ label, run: () => ctx.router.push('MarketForm', scheduleForm(d, (c) => c.router.pop())) });
   switch (d.status) {
     case 'awaiting_confirmation':
-      if (!d.confirmedByMe) acts.push({ label: t('Confirm terms'), run: () => confirm(ctx, { title: t('Confirm these terms?'), note: t('Both sides must confirm. This is a record of what you agreed, not a payment.'), yes: t('Yes, confirm'), run: post('confirm', {}, t('Confirmed.')) }) });
+      if (!d.confirmedByMe) acts.push({ label: t('Confirm terms'), run: () => confirmTrade(ctx, {
+        title: 'Confirm these terms?', verb: 'confirm', terms: d.terms, crop: d.crop.name, counterparty: d.counterparty.displayName, role: d.role, pickup: d.pickup,
+        run: post('confirm', {}, t('Confirmed.')),
+      }) });
       acts.push(cancel);
       break;
     case 'agreed':

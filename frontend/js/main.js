@@ -1,6 +1,7 @@
 import { initKeypad } from './keypad.js';
 import { createRouter } from './router.js';
 import mainMenu from './screens/mainMenu.js';
+import home from './screens/home.js';
 import weather from './screens/weather.js';
 import marketPrices from './screens/marketPrices.js';
 import priceDetail from './screens/priceDetail.js';
@@ -26,6 +27,7 @@ import { startMarketSync } from './market/marketSync.js';
 import { MarketForm, MarketNumber, MarketText } from './market/marketForm.js';
 import { MarketHome, MarketFeed, MarketFilter, MarketDetail } from './market/marketScreens.js';
 import { MarketOffers, MarketOffer, MarketDeals, MarketDeal, MarketReason } from './market/marketTrades.js';
+import { TradeConfirm } from './market/tradeConfirm.js';
 import { CreatePostTitle, CreatePostBody, CreatePostTagsLoader, CreatePostPreview } from './screens/createPost.js';
 import { farmOpsScreens } from './screens/farmOps.js';
 
@@ -36,12 +38,12 @@ const farmerCircle = {
 };
 
 const screens = {
-  MainMenu: mainMenu, Weather: weather, MarketPrices: marketPrices, PriceDetail: priceDetail, ComingSoon: comingSoon,
+  Home: home, MainMenu: mainMenu, Weather: weather, MarketPrices: marketPrices, PriceDetail: priceDetail, ComingSoon: comingSoon,
   AskAIHome: askAIHome, AskAIInput: askAIInput, AskAIThinking: askAIThinking, AskAIAnswer: askAIAnswer,
   AskAISources, AskAIMedia, AskAIPhoto, AskAIVoice, AskAIHistory,
   AuthWelcome, AuthPhone, AuthPin, ProfileName, ProfileVillage, ProfileRegion, AuthResult, Settings, ProfileSummary, LanguageSettings, CropSettings, WelcomeLanguage,
   ...farmerCircle,
-  MarketHome, MarketFeed, MarketFilter, MarketDetail, MarketForm, MarketNumber, MarketText, MarketOffers, MarketOffer, MarketDeals, MarketDeal, MarketReason,
+  MarketHome, MarketFeed, MarketFilter, MarketDetail, MarketForm, MarketNumber, MarketText, MarketOffers, MarketOffer, MarketDeals, MarketDeal, MarketReason, TradeConfirm,
   ...farmOpsScreens,
 };
 const $ = (id) => document.getElementById(id);
@@ -55,7 +57,7 @@ try {
   const session = await getJSON('/api/auth/session');
   identity.profile = session.user;
   if (session.user?.language && setLanguage(session.user.language)) await new Promise(() => {}); // reloading in the member's language
-  router.start(session.user ? 'MainMenu' : 'AuthWelcome');
+  router.start(session.user ? 'Home' : 'AuthWelcome');
 } catch {
   // A local price-only demo may intentionally run without PostgreSQL/auth.
   router.start('AuthWelcome');
