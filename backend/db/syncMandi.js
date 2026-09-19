@@ -9,6 +9,9 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createPool } from './pool.js';
 import { createMandiClient, mandiRow, RateLimited } from '../services/mandiClient.js';
+import { createPriceAlertService } from '../services/priceAlertService.js';
+import { createPriceService } from '../services/priceService.js';
+import { pgRepo } from '../services/priceRepo.js';
 
 // Uttar Pradesh: India's largest farm state and the densest Agmarknet reporting (on 2026-09-19:
 // wheat 73 mandis, potato 24, rice 15, tomato 13, onion 11). Members pick one of its districts
@@ -163,5 +166,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   try {
     const r = await syncMandi({ pool, client, geocode: createGeocoder(), progressFile: path.join(here, '..', 'tmp', 'mandi-sync-progress.json') });
     console.log(`mandi sync ${r.complete ? 'complete' : 'paused'}: ${r.pairs} state/crop pairs, ${r.written} price rows`);
+    // New prices are in: fire the price alerts they reach (the farmer sees them on Home).
+    try {
+      const fired = await createPriceAlertService({ pool, prices: createPriceService(pgRepo(pool)) }).check();
+      console.log(`price alerts: ${fired} fired`);
+    } catch (err) { console.warn(`price alerts: not checked (${err.message})`); }
   } finally { await pool.end(); }
 }

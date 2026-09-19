@@ -59,7 +59,7 @@ export function createFarmOpsService(pool, { farmPriceService = null, weatherGet
   const shapeTask = (t) => ({ ...t, localDate: isoDate(t.local_date), fieldName: t.field_name, cropCode: t.crop_code });
 
   async function farms(user) {
-    const r = await pool.query(`SELECT f.id,f.name,f.timezone,f.country_code,f.region_code,m.role,
+    const r = await pool.query(`SELECT f.id,f.name,f.timezone,f.country_code,f.region_code,m.role,f.latitude::float8 latitude,f.longitude::float8 longitude,
       (SELECT name FROM app.regions WHERE code=f.region_code) region_name,
       (SELECT count(*)::int FROM app.farm_tasks t WHERE t.farm_id=f.id AND t.local_date=(now() AT TIME ZONE f.timezone)::date
        AND t.status NOT IN ('completed','verified','cancelled','skipped')) open_tasks
@@ -229,7 +229,9 @@ export function createFarmOpsService(pool, { farmPriceService = null, weatherGet
     ]);
     const weather = ['spraying','fertilizer'].includes(r.rows[0].type) ? await weatherForFarm(farm) : null;
     return { item: shapeTask(r.rows[0]), checklist: checklist.rows, events: events.rows, result: result.rows[0] || null,
-      sprayAssessment: weather ? assessSprayConditions(weather, { date: isoDate(r.rows[0].local_date) }) : null };
+      sprayAssessment: weather ? assessSprayConditions(weather, { date: isoDate(r.rows[0].local_date) }) : null,
+      // Where the spray numbers come from and how old they are (the screen shows it next to them).
+      weatherSource: weather ? { provider: 'open-meteo', fetchedAt: weather.fetchedAt ?? null, stale: Boolean(weather.stale) } : null };
   }
 
   async function createTask(user, farmId, b) {
@@ -397,5 +399,23 @@ export function createFarmOpsService(pool, { farmPriceService = null, weatherGet
     const r = await pool.query(`SELECT r.*,f.name field_name,p.display_name actor_name,t.title task_title FROM app.farm_records r LEFT JOIN app.farm_fields f ON f.id=r.field_id LEFT JOIN app.user_profiles p ON p.user_id=r.actor_user_id LEFT JOIN app.farm_tasks t ON t.id=r.task_id WHERE ${where.join(' AND ')} ORDER BY r.occurred_at DESC LIMIT 100`, params);
     return { items: r.rows };
   }
-  return { farms, createFarm, membership, overview, prices, sprayAssessment, calendar, listTasks, getTask, createTask, transition, assign, reschedule, checklist, fields, members, records };
+  // What other members did on my farms since `since` (a cursor from the previous call), so every
+  // phone on the farm sees a task change within seconds. Without `since`: just a cursor for now.
+  async function sync(user, since) {
+    const cursor = /^(-infinity|\d{4}-\d{2}-\d{2}[ T][\d:.]+([+-]\d{2}(:?\d{2})?|Z)?)$/.test(String(since || '')) ? String(since) : null;
+    // First call: the newest event so far (not now(): an event written in the same instant would be skipped).
+    if (!cursor) return { cursor: (await pool.query(`SELECT COALESCE(max(e.created_at), '-infinity')::text c FROM app.farm_task_events e
+      JOIN app.farm_tasks t ON t.id=e.task_id JOIN app.farm_members m ON m.farm_id=t.farm_id AND m.user_id=$1 AND m.status='active'`, [user.id])).rows[0].c, events: [] };
+    const r = await pool.query(`SELECT e.event_type, e.to_status, e.created_at::text at_text, t.title, p.display_name actor
+      FROM app.farm_task_events e JOIN app.farm_tasks t ON t.id=e.task_id
+      JOIN app.farm_members m ON m.farm_id=t.farm_id AND m.user_id=$1 AND m.status='active'
+      LEFT JOIN app.user_profiles p ON p.user_id=e.actor_user_id
+      WHERE e.created_at > $2::timestamptz AND e.actor_user_id IS DISTINCT FROM $1
+      ORDER BY e.created_at LIMIT 50`, [user.id, cursor]);
+    const last = (await pool.query(`SELECT max(e.created_at)::text c FROM app.farm_task_events e JOIN app.farm_tasks t ON t.id=e.task_id
+      JOIN app.farm_members m ON m.farm_id=t.farm_id AND m.user_id=$1 AND m.status='active' WHERE e.created_at > $2::timestamptz`, [user.id, cursor])).rows[0].c;
+    return { cursor: last || cursor, events: r.rows.map((e) => ({ kind: e.event_type, status: e.to_status, task: e.title, actor: e.actor || null, at: e.at_text })) };
+  }
+
+  return { farms, sync, createFarm, membership, overview, prices, sprayAssessment, calendar, listTasks, getTask, createTask, transition, assign, reschedule, checklist, fields, members, records };
 }

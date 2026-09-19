@@ -21,6 +21,7 @@ import { seedDemo } from './db/forumSeed.js';
 import { errorHandler, unavailable, AppError } from './middleware/errors.js';
 import { requestId } from './middleware/requestId.js';
 import { createFarmOpsRouter } from './routes/farmOps.js';
+import { createPriceAlertRouter } from './routes/priceAlerts.js';
 import { seedFarmOps } from './db/farmOpsSeed.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -101,6 +102,15 @@ if (pool) {
     } catch (err) {
       console.warn(`farm ops: disabled (${err.message}) - apply migration 007 with npm run db:migrate`);
       app.use('/api/farms', unavailable("Today's Farm is not available right now."));
+    }
+    // Price alerts need migration 012; checked again after every mandi sync (db/syncMandi.js).
+    try {
+      await pool.query('SELECT 1 FROM app.price_alerts LIMIT 0');
+      app.use('/api/price-alerts', createPriceAlertRouter({ pool, auth, prices }).router);
+      console.log('price alerts: enabled');
+    } catch (err) {
+      console.warn(`price alerts: disabled (${err.message}) - apply migration 012 with npm run db:migrate`);
+      app.use('/api/price-alerts', unavailable('Price alerts are not available right now.'));
     }
   } catch (err) {
     // Prices and offline AI are still useful on a local demo, but identity must

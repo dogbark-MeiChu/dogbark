@@ -1,6 +1,7 @@
 import { t } from '../i18n/index.js';
 import { getJSON } from '../api.js';
 import { user, identity } from '../state.js';
+import { pointQuery } from '../place.js';
 import { money, signed, bars, h } from '../fmt.js';
 import { legacyTransportModel } from './priceDetailModel.js';
 
@@ -17,7 +18,8 @@ async function load(ctx) {
   const { crop, market, home, region } = ctx.params;
   try {
     const p = identity.profile;
-    const at = p?.regionLat != null && p?.regionLng != null ? `&lat=${p.regionLat}&lng=${p.regionLng}` : '';
+    // The same point Verified Prices used for "your area" (the farm's, else the profile's).
+    const at = ctx.params.place ? pointQuery(ctx.params.place) : p?.regionLat != null && p?.regionLng != null ? `&lat=${p.regionLat}&lng=${p.regionLng}` : '';
     calc = await getJSON(`/api/prices/net-profit?crop=${crop}&region=${region || user.region}&from=${home || user.homeMarket}&to=${market.code}&qty=${qty}${at}`);
   } catch {
     calc = null; error = t('Calculation unavailable');
