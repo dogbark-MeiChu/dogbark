@@ -11,7 +11,7 @@ const ITEMS = [
 
 export default {
   name: 'MainMenu',
-  title: 'AgriLink',
+  title: 'All features', // opened from Home (key 0 / Menu)
   numericSelect: true,
   softLeft: { label: '', handler() {} },
   render() {

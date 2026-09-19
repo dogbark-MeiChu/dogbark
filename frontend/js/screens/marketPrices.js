@@ -100,7 +100,7 @@ export default {
     const variety = data.variety && !['Common', 'Other', 'FAQ'].includes(data.variety) ? ` · ${data.variety}` : '';
     wrap.appendChild(h('msg dim', `${t('Data:')} ${dataDate(data.date)} · ${sourceLabel(data.source)}${variety}`));
     wrap.appendChild(h('msg', `${t('Trend:')} ${trendReason(data.analysis.reason)}`));
-    if (data.sample) wrap.appendChild(h('msg dim hide-small', t('Sample data')));
+    if (data.sample) wrap.appendChild(h('msg src-stale', t('Sample data'))); // shown on every screen size: judges and farmers must know
     return wrap;
   },
   onKey(action, ctx) {

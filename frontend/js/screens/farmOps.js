@@ -4,6 +4,7 @@ import { farmOps, identity } from '../state.js';
 import * as api from '../farmOps/farmOpsApi.js';
 import { autoCap } from '../forum/forumUtils.js';
 import { wmo } from './weather.js';
+import { freshness } from '../freshness.js';
 
 const STATUS = { scheduled:tr('□ Scheduled'),assigned:tr('→ Assigned'),accepted:tr('→ Accepted'),in_progress:tr('▶ In progress'),completed:tr('✓ Completed'),verified:tr('✓✓ Verified'),blocked:tr('× Blocked'),delayed:tr('– Delayed'),cancelled:tr('– Cancelled') };
 const dateShift = (iso, days) => { const d=new Date(`${iso}T00:00:00Z`); d.setUTCDate(d.getUTCDate()+days); return d.toISOString().slice(0,10); };
@@ -14,11 +15,13 @@ const message = (text, cls='ops-empty') => el(cls, tr(text));
 // Event times in the farm's own timezone: the cloud browser's clock is CloudMosa's, not the
 // farmer's. Same locale as niceDate (the member's UI language).
 const farmTime = (iso, tz) => new Intl.DateTimeFormat(dateLocale, { timeZone: tz || 'UTC', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).format(new Date(iso)).replace(',', '');
-const farmToday = (tz) => new Intl.DateTimeFormat('en-CA', { timeZone: tz || 'UTC', year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date());
+export const farmToday = (tz) => new Intl.DateTimeFormat('en-CA', { timeZone: tz || 'UTC', year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date());
 // Errors go to the shared toast bar; native alert() dialogs are not verified on Cloud Phone keypads.
 let flashTimer=null;
 const flash = (text) => { const t=document.getElementById('toast'); if(!t)return; t.textContent=`⚠ ${tr(text)}`; t.hidden=false; clearTimeout(flashTimer); flashTimer=setTimeout(()=>{t.hidden=true;},4000); };
-function openFarm(ctx, f) { farmOps.activeFarmId=f.id; farmOps.activeFarm=f; farmOps.marketIndex=0; farmOps.activeDate=new URLSearchParams(location.search).get('demoDate')||farmToday(f.timezone); ctx.router.replace('TodayDashboard'); }
+// Makes `f` the active farm on its own today (Home opens the dashboard with it too).
+export function selectFarm(f) { farmOps.activeFarmId=f.id; farmOps.activeFarm=f; farmOps.marketIndex=0; farmOps.activeDate=new URLSearchParams(location.search).get('demoDate')||farmToday(f.timezone); }
+function openFarm(ctx, f) { selectFarm(f); ctx.router.replace('TodayDashboard'); }
 const taskRow = (t) => {
   const row=el(`item ops-task-row priority-${t.priority || 'normal'}`); row.dataset.id=t.id;
   const mark=el('ops-task-status', (STATUS[t.status] || t.status || '□').split(' ')[0]);
@@ -46,6 +49,7 @@ const weatherRow = (data) => {
     : ['past','beyond'].includes(day.basis) ? '' : tr('No spray task');
   const row=el(`ops-live-row ops-weather ops-${a?.overall||'unknown'}`);
   row.append(el('ops-live-main',main)); if(meta) row.append(el('ops-live-meta',meta));
+  if(data.weather.stale) row.append(sourceLine({provider:'open-meteo',...data.weather}));
   return row;
 };
 // One row per farm, for the crops it grows; with several, the row is selectable and Enter shows the next.
@@ -54,9 +58,12 @@ const marketRow = (list) => {
   const arrow=String(m.trend7d).startsWith('-')?'▼':'▲';
   const row=el(`ops-live-row ops-market${many?' item':''}`); if(many) row.dataset.market='1';
   row.append(el('ops-live-main',`📊 ${tr(m.crop.charAt(0).toUpperCase()+m.crop.slice(1)).toUpperCase()} ₹${Math.round(m.localPrice)}/${tr('qt')} ${arrow}${m.trend7d}${many?` · ${i+1}/${list.length}`:''}`),
-    el('ops-live-meta',m.bestNearbyMarket?`${m.bestNearbyMarket}: ${m.netGainPerUnit>=0?'+':''}₹${m.netGainPerUnit??'?'} /${tr('qt')} ${tr('net')} · ${m.source}`:`${tr('Source:')} ${m.provider} · ${m.source}`));
+    el('ops-live-meta',m.bestNearbyMarket?`${m.bestNearbyMarket}: ${m.netGainPerUnit>=0?'+':''}₹${m.netGainPerUnit??'?'} /${tr('qt')} ${tr('net')}`:''),
+    sourceLine(m));
   return row;
 };
+
+const sourceLine = (data) => { const f=freshness(data); return el(`ops-live-meta${f.warn?' ops-stale':''}`,f.text); };
 
 function asyncScreen({ name, title=name, load, renderData, softLeft, onKey, onEnter, initialFocus, numericSelect=false }) {
   let state={ status:'idle', data:null, error:null };

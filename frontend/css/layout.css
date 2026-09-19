@@ -31,3 +31,18 @@
 }
 .tts-toast[hidden] { display: none; }
 
+
+/* Home: three decision rows + "0 All features". Number key on the left, one line per fact. */
+.home .home-row { align-items: flex-start; padding: 4px var(--pad); }
+.home-n { flex: 0 0 auto; min-width: 1.1em; color: var(--accent); font-weight: 800; }
+.home-body { min-width: 0; flex: 1 1 auto; }
+.home-main { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home-meta, .home-src { font-size: calc(var(--fs) * .78); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home-src { font-size: calc(var(--fs) * .7); }
+.home-warn { border-left-color: #ffb454; }
+.home-warn .home-meta { color: #ffb454; }
+.home-all { min-height: 0; color: var(--dim); }
+.item.focused .home-n, .item.focused .home-meta, .item.focused .home-src { color: #000; }
+/* Data served from a stale copy or sample data: always visible, never hidden on small screens. */
+.src-stale, .ops-stale { color: #ffb454 !important; }
+.item.focused .src-stale { color: #5a3300 !important; }

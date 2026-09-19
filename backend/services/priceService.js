@@ -222,5 +222,5 @@ export function marketSnapshot(data) {
   return { crop: data.crop, localPrice: data.localMarket.modalPrice,
     bestNearbyPrice: best?.modalPrice ?? null, bestNearbyMarket: best?.name ?? null,
     netGainPerUnit: best?.netGainPerUnit ?? null, trend7d: `${pct(data.sevenDayTrend) >= 0 ? '+' : ''}${pct(data.sevenDayTrend)}%`,
-    source: data.source, stale: data.stale, provider: data.provider, fetchedAt: data.fetchedAt };
+    source: data.source, stale: data.stale, provider: data.provider, fetchedAt: data.fetchedAt, date: data.date ?? null };
 }

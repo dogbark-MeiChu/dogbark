@@ -156,8 +156,10 @@ export function createFarmOpsService(pool, { farmPriceService = null, weatherGet
         return weather;
       } catch { /* use persisted snapshot */ }
     }
-    return (await pool.query(`SELECT payload FROM app.farm_weather_snapshots WHERE farm_id=$1
-      ORDER BY fetched_at DESC LIMIT 1`, [farm.id])).rows[0]?.payload || null;
+    // Upstream failed: the last stored forecast, marked stale with its age.
+    const row = (await pool.query(`SELECT payload,fetched_at FROM app.farm_weather_snapshots WHERE farm_id=$1
+      ORDER BY fetched_at DESC LIMIT 1`, [farm.id])).rows[0];
+    return row ? { ...row.payload, stale: true, fetchedAt: new Date(row.fetched_at).toISOString() } : null;
   }
 
   async function communityFor(user, day) {

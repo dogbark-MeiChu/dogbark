@@ -90,17 +90,19 @@ export function advise(w) {
 export async function getWeather(lat, lng, { fetchImpl = fetch, now = Date.now } = {}) {
   const key = `${lat.toFixed(2)},${lng.toFixed(2)}`;
   const hit = cache.get(key);
-  if (hit && now() - hit.at < TTL_MS) return { ...hit.data, stale: false };
+  const at = (t) => new Date(t).toISOString(); // when the data was fetched, so screens can say how old it is
+  if (hit && now() - hit.at < TTL_MS) return { ...hit.data, stale: false, fetchedAt: at(hit.at) };
 
   try {
     const res = await fetchImpl(buildUrl(lat, lng), { signal: AbortSignal.timeout(TIMEOUT_MS) });
     if (!res.ok) throw new Error(`open-meteo ${res.status}`);
     const data = normalize(await res.json());
     data.advice = advise(data);
-    cache.set(key, { at: now(), data });
-    return { ...data, stale: false };
+    const fetched = now();
+    cache.set(key, { at: fetched, data });
+    return { ...data, stale: false, fetchedAt: at(fetched) };
   } catch (err) {
-    if (hit) return { ...hit.data, stale: true }; // last known good
+    if (hit) return { ...hit.data, stale: true, fetchedAt: at(hit.at) }; // last known good
     throw err;
   }
 }

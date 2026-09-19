@@ -22,7 +22,7 @@ async function options() {
 function enterMain(ctx, profile) {
   identity.profile = profile;
   if (setLanguage(profile.language)) return; // reloads in the member's language
-  ctx.router.replace('MainMenu');
+  ctx.router.replace('Home');
 }
 function editKey(action, tap, ctx, next) {
   if (action.startsWith('NUM_')) { tap.press(Number(action.slice(4))); ctx.rerender(); return true; }

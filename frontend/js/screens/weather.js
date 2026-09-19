@@ -1,6 +1,7 @@
 import { getJSON } from '../api.js';
 import { user } from '../state.js';
 import { t } from '../i18n/index.js';
+import { freshness } from '../freshness.js';
 
 // WMO weather_code -> [emoji, text label]. Text label is the fallback if the
 // handset font lacks emoji glyphs.
@@ -81,7 +82,9 @@ export default {
     } else {
       wrap.appendChild(el('msg', `${t(data.advice.action.toUpperCase())}: ${t(data.advice.reason)}`));
     }
-    if (data.stale) wrap.appendChild(el('msg hide-small', t('Offline data')));
+    // Source and age always show (small screens too): a stale forecast must never pass as today's.
+    const f = freshness({ provider: 'open-meteo', ...data });
+    wrap.appendChild(el(f.warn ? 'msg src-stale' : 'msg dim', f.text));
     return wrap;
   },
   onKey(action, ctx) {
