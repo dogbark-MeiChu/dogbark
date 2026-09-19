@@ -204,7 +204,7 @@ export default {
     }, CLOCK_MS);
   },
   onHide() { active = false; clearInterval(tick); },
-  onRefresh(ctx) { unanswered += 1; settle(ctx, 'market', loadMarket()); }, // the market poller saw news
+  onRefresh(ctx) { load(ctx, true); }, // the market or farm poller saw news: refresh, keeping the rows on screen
   render() {
     const list = el('list home');
     list.append(priceRow(), marketRow(), farmRow());

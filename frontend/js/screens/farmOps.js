@@ -70,6 +70,8 @@ function asyncScreen({ name, title=name, load, renderData, softLeft, onKey, onEn
   async function fetchData(ctx) { state={...state,status:'loading',error:null}; ctx.rerender(); try { state={status:'ready',data:await load(ctx),error:null}; } catch(e) { state={...state,status:'error',error:e.message}; } ctx.rerender(); }
   return { name,title,softLeft,numericSelect,softRight:{label:'Back',handler:(ctx)=>ctx.router.pop()},
     onShow(ctx){ if(state.status==='idle') fetchData(ctx); }, onHide(){ state={status:'idle',data:null,error:null}; },
+    // A change from another phone (farmOps/farmSync.js): refetch, keeping the current data on screen meanwhile.
+    onRefresh(ctx){ if(state.status!=='idle') fetchData(ctx); },
     render(ctx){ if(state.status==='loading'&&!state.data)return message('Loading…'); if(state.status==='error')return el('ops-error',`${state.error ? tr(state.error) : tr('Unable to load')} · ${tr('Enter to retry')}`); return state.data?renderData(state.data,ctx):message('Loading…'); },
     initialFocus(ctx){ return initialFocus?.(ctx,state.data); },
     onKey(action,ctx){ if(state.status==='error'&&action==='ENTER'){fetchData(ctx);return true;} return onKey?.(action,ctx,state.data)===true; },
