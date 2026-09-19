@@ -1,5 +1,5 @@
 import { t } from '../i18n/index.js';
-import { el } from '../dom.js';
+import { el, isCompact } from '../dom.js';
 import { getJSON } from '../api.js';
 import { identity, user } from '../state.js';
 import { freshness } from '../freshness.js';
@@ -22,12 +22,21 @@ const RAIN_ALERT = 60; // % chance that is worth a warning on Home
 
 let rows = { price: null, market: null, farm: null }; // each: { ok, ... } | { error } | null (loading)
 let active = false, keepFocus = null;
+let syncedAt = null, tick = null, lastLoad = 0, unanswered = 0;
+const CLOCK_MS = 30 * 1000; // header clock
+const RELOAD_MS = 5 * 60 * 1000; // Home refetches on its own while it stays open
+
+// The farmer's clock, not the cloud browser's: the farm's timezone, else the member's country.
+const TZ = { IN: 'Asia/Kolkata', BD: 'Asia/Dhaka', VN: 'Asia/Ho_Chi_Minh', TW: 'Asia/Taipei' };
+const zone = () => rows.farm?.farm?.timezone || TZ[String(identity.profile?.regionCode || '').slice(0, 2)] || 'Asia/Kolkata';
+const hhmm = (d) => new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: zone() }).format(d);
 
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 function settle(ctx, key, promise) {
   promise.then((v) => ({ ok: true, ...v }), (e) => ({ error: e?.message || 'Unavailable' })).then((v) => {
     rows[key] = v;
+    if (--unanswered === 0) syncedAt = new Date(); // all three answered
     if (!active) return;
     keepFocus = ctx.focus?.index ?? 0;
     ctx.rerender();
@@ -70,8 +79,11 @@ async function loadMarket() {
   };
 }
 
-function load(ctx) {
-  rows = { price: null, market: null, farm: null };
+// `keep`: an automatic refresh keeps showing the current rows until the new ones arrive.
+function load(ctx, keep = false) {
+  lastLoad = Date.now();
+  unanswered = 3;
+  if (!keep) rows = { price: null, market: null, farm: null };
   const farm = loadFarm();
   settle(ctx, 'farm', farm);
   // With a farm, its dashboard already carries the price snapshot (net of transport); reuse it.
@@ -159,26 +171,42 @@ function farmRow() {
     warn: Boolean(rain || (spray && spray.overall !== 'optimal') || s.blocked),
     main: t('Farm: {n} tasks open', { n: open }), // the count must fit; the dashboard names the farm
     meta,
-    src: d.weather?.stale ? { provider: 'open-meteo', ...d.weather } : null,
+    src: d.weather ? { provider: 'open-meteo', ...d.weather } : null, // weather drives this row, so it says how fresh it is
   });
 }
 
 export default {
   name: 'Home',
-  title: 'Today',
+  // Header: the farmer's time now, and when Home last had fresh answers from all three rows.
+  title: () => `${t('Today')} ${hhmm(new Date())}`,
+  statusBadge: () => {
+    if (!syncedAt) return isCompact() ? '○' : `○ ${t('Syncing…')}`;
+    return isCompact() ? `● ${hhmm(syncedAt)}` : `● ${t('Synced {time}', { time: hhmm(syncedAt) })}`; // 128px: no room for the word
+  },
   numericSelect: true,
   softLeft: { label: 'Menu', handler: (ctx) => ctx.router.push('MainMenu', { title: t('All features') }) },
   // The router calls onShow on every rerender too; load once per visit (prices, offers and tasks
   // move while you are away, so coming back reloads).
-  onShow(ctx) { if (active) return; active = true; load(ctx); },
-  onHide() { active = false; },
-  onRefresh(ctx) { settle(ctx, 'market', loadMarket()); }, // the market poller saw news
+  onShow(ctx) {
+    if (active) return;
+    active = true;
+    load(ctx);
+    // Keep the clock current and the rows fresh while the phone sits on Home.
+    tick = setInterval(() => {
+      if (!active) return;
+      if (Date.now() - lastLoad >= RELOAD_MS) load(ctx, true);
+      keepFocus = ctx.focus?.index ?? 0;
+      ctx.rerender();
+    }, CLOCK_MS);
+  },
+  onHide() { active = false; clearInterval(tick); },
+  onRefresh(ctx) { unanswered += 1; settle(ctx, 'market', loadMarket()); }, // the market poller saw news
   render() {
     const list = el('list home');
     list.append(priceRow(), marketRow(), farmRow());
     const all = el('item home-row home-all');
     all.dataset.key = 'all';
-    all.append(el('home-n', '0'), el('home-main', t('All features')));
+    all.append(el('home-n', '0'), el('home-main', t('All features')), el('home-hint', t('# Read aloud')));
     list.append(all);
     return list;
   },

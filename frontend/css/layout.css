@@ -32,17 +32,25 @@
 .tts-toast[hidden] { display: none; }
 
 
-/* Home: three decision rows + "0 All features". Number key on the left, one line per fact. */
-.home .home-row { align-items: flex-start; padding: 4px var(--pad); }
-.home-n { flex: 0 0 auto; min-width: 1.1em; color: var(--accent); font-weight: 800; }
+/* Home: three decision rows share the whole screen (no empty space below), "0 All features" is a
+   thin footer. Text wraps to two lines instead of being cut off mid-word. */
+.list.home { height: 100%; }
+.home .home-row { flex: 1 1 0; min-height: 0; align-items: center; padding: 3px var(--pad); }
+.home .home-all { flex: 0 0 auto; padding: 4px var(--pad); color: var(--dim); }
+.home-n { flex: 0 0 auto; min-width: 1.1em; color: var(--accent); font-weight: 800; font-size: calc(var(--fs) * 1.1); }
 .home-body { min-width: 0; flex: 1 1 auto; }
-.home-main { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.home-meta, .home-src { font-size: calc(var(--fs) * .78); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.home-src { font-size: calc(var(--fs) * .7); }
+.home-main { font-size: calc(var(--fs) * 1.1); line-height: 1.15; }
+.home-meta { font-size: calc(var(--fs) * .8); line-height: 1.2; color: var(--dim); }
+.home-src { font-size: calc(var(--fs) * .7); color: var(--dim); }
+.home-main, .home-meta { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.home-hint { margin-left: auto; font-size: calc(var(--fs) * .75); }
 .home-warn { border-left-color: #ffb454; }
 .home-warn .home-meta { color: #ffb454; }
-.home-all { min-height: 0; color: var(--dim); }
-.item.focused .home-n, .item.focused .home-meta, .item.focused .home-src { color: #000; }
+.item.focused .home-n, .item.focused .home-meta, .item.focused .home-src, .item.focused .home-hint { color: #000; }
+@media (max-width: 160px) {
+  .home-main, .home-meta { -webkit-line-clamp: 1; }
+  .home-src, .home-hint { display: none; }
+}
 /* Data served from a stale copy or sample data: always visible, never hidden on small screens. */
 .src-stale, .ops-stale { color: #ffb454 !important; }
 .item.focused .src-stale { color: #5a3300 !important; }
