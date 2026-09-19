@@ -229,7 +229,9 @@ export function createFarmOpsService(pool, { farmPriceService = null, weatherGet
     ]);
     const weather = ['spraying','fertilizer'].includes(r.rows[0].type) ? await weatherForFarm(farm) : null;
     return { item: shapeTask(r.rows[0]), checklist: checklist.rows, events: events.rows, result: result.rows[0] || null,
-      sprayAssessment: weather ? assessSprayConditions(weather, { date: isoDate(r.rows[0].local_date) }) : null };
+      sprayAssessment: weather ? assessSprayConditions(weather, { date: isoDate(r.rows[0].local_date) }) : null,
+      // Where the spray numbers come from and how old they are (the screen shows it next to them).
+      weatherSource: weather ? { provider: 'open-meteo', fetchedAt: weather.fetchedAt ?? null, stale: Boolean(weather.stale) } : null };
   }
 
   async function createTask(user, farmId, b) {

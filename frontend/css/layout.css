@@ -58,3 +58,6 @@
 .wx-spray { text-align: left; color: var(--fg); }
 .wx-caution { color: #ffb454; }
 .wx-unsuitable { color: #ff6b62; }
+/* Source lines keep their own colour inside caution/unsuitable rows; a stale one shows even at 128px. */
+.ops-live-meta.ops-src, .ops-live-row .ops-live-meta.ops-src { color: var(--dim); }
+@media (max-width: 160px) { .ops-live-meta.ops-stale { display: block !important; } }
