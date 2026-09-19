@@ -60,7 +60,7 @@ docs/  devlog/         規格與開發紀錄（見第 10 節）
 | 5 | Today's Farm | `screens/farmOps.js` | `/api/farms/*`（一人可有多個農場；任務可 assign／reschedule／delay／cancel／unblock）| `services/farmOpsService.js`、`sprayAssessment.js`（逐時預報算最佳噴藥時段）| migration 007 `farm_*`、011 `price_snapshots` |
 | 6 | Weather | `screens/weather.js` | `GET /api/weather?lat&lng` | `services/weatherService.js` | Open-Meteo，30 分鐘快取，失敗時回舊資料（`stale:true`）|
 | 7 | Settings / 帳號（含「登出其他手機」）| `screens/identity.js` | `/api/auth/*`（`/logout-others`）| `services/authService.js` | migration 004 |
-| — | `#` 朗讀 | `js/tts.js`、`screenText.js` | `POST /api/tts` | `services/ttsService.js` | Google 翻譯取得譯文，瀏覽器 `speechSynthesis` 發音 |
+| — | `#` 朗讀 | `js/tts.js`、`screenText.js` | `POST /api/tts` | `services/ttsService.js` | Google 翻譯取得譯文 → 伺服器產生 MP3（Google，失敗改 Gemini）→ 都失敗時回傳譯文，由手機 `speechSynthesis` 朗讀 |
 | — | 管理 | `backend/admin/` | `/api/admin/*` | `routes/admin.js` | `admin_audit_log` |
 
 ## 4. 後端慣例（改後端前必讀）
@@ -212,7 +212,6 @@ curl -s https://<host>/api/ai/capabilities  # 應回 {"ok":true,...}
 | 問題 | 位置 | 狀態 |
 |---|---|---|
 | VM 還是 Node 18；repo 已統一為 22 | VM | 照第 8 節「Node 版本」在 VM 上升級 |
-| TTS：線上是 v3（手機 `speechSynthesis` 朗讀），但裝置缺越南語／孟加拉語語音包時會用中文發音；craby168 的 v2（伺服器產生 MP3 + Gemini 備援）還沒合併 | `services/ttsService.js`、`routes/tts.js`、`frontend/js/tts.js`；v2 在 `70efa82` | 等 craby168 測完後合併，見 `devlog-kris.md` |
 | `server.js` 的功能啟用邏輯沒有測試 | `server.js` | 計畫第 4 項（`createApp`）|
 | 前端 fallback 地區還是 CEDA 時期的 `IN-CEDA-S9-D136` / `ceda-680` | `frontend/js/state.js` | 小問題，只影響沒有 profile 的情況 |
 | Market Prices 畫面在一次 session 內快取作物清單，同步完成前開過就要重新整理 | `screens/marketPrices.js` | 小問題 |
