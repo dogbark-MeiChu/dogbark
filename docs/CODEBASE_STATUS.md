@@ -196,7 +196,7 @@ npm run demo:dev        # :3103 全部功能 + 即時北方邦行情（demo 彩�
 
 ### Node 版本
 
-repo 以 **Node 22** 為準：`.nvmrc`、`engines: >=22`、CI 都是 22。VM 目前是 Node 18（2025-04 已停止支援），`setup.sh` 會印出警告。程式在 18 上還能跑，但 `google-translate-api-x` 需要 21 以上（npm 會警告），而且我們只在 22 上測試。
+repo 以 **Node 22** 為準：`.nvmrc`、`engines: >=22`、CI 都是 22。VM 已升級到 Node 22（2026-09-20 確認 `node -v` = v22.23.2）。下面的步驟留作重建 VM 時參考。
 
 在 VM 上升級（Ubuntu 24.04；用 NodeSource，`node` 會留在 systemd 用的 `/usr/bin/node`，**不要用 nvm**）：
 
@@ -217,7 +217,6 @@ curl -s https://<host>/api/ai/capabilities  # 應回 {"ok":true,...}
 
 | 問題 | 位置 | 狀態 |
 |---|---|---|
-| VM 還是 Node 18；repo 已統一為 22 | VM | 照第 8 節「Node 版本」在 VM 上升級 |
 | `server.js` 的功能啟用邏輯沒有測試 | `server.js` | 計畫第 4 項（`createApp`）|
 | 前端 fallback 地區還是 CEDA 時期的 `IN-CEDA-S9-D136` / `ceda-680` | `frontend/js/state.js` | 小問題，只影響沒有 profile 的情況 |
 | Market Prices 畫面在一次 session 內快取作物清單，同步完成前開過就要重新整理 | `screens/marketPrices.js` | 小問題 |
