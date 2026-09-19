@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildEvidenceSummary, countQualifyingDeals, deriveEvidenceBand } from './reputationService.js';
+import {
+  ADVERSE_OUTCOME_DATA_STATUS, buildEvidenceSummary, countQualifyingDeals, deriveEvidenceBand,
+} from './reputationService.js';
 
 const at = (day) => `2026-08-${String(day).padStart(2, '0')}T00:00:00Z`;
 const deal = (counterpartyId, day = 1, handoverVerified = true) => ({ counterpartyId, completedAt: at(day), handoverVerified });
@@ -18,6 +20,21 @@ test('three counterparties and a verified handover establish a trader', () => {
   const out = buildEvidenceSummary({ role: 'buyer', deals: [deal('a'), deal('b'), deal('c')] });
   assert.equal(out.band, 'established');
   assert.equal(out.distinctCounterparties, 3);
+  assert.equal(out.adverseOutcomeDataStatus, ADVERSE_OUTCOME_DATA_STATUS);
+  assert.equal(out.confirmedAdverseOutcomes90d, null);
+  assert.equal(out.underReview, null);
+  assert.equal(out.bandBasis, 'transaction_evidence_only');
+});
+
+test('confirmed adverse outcomes block established only after adjudication data exists', () => {
+  const out = buildEvidenceSummary({ role: 'buyer', deals: [deal('a'), deal('b'), deal('c')] });
+  assert.equal(out.band, 'established'); // P0: transparent transaction-evidence-only band
+  assert.equal(deriveEvidenceBand({
+    ...out, adverseOutcomeDataStatus: 'available', confirmedAdverseOutcomes90d: 1,
+  }), 'new');
+  assert.equal(deriveEvidenceBand({
+    ...out, adverseOutcomeDataStatus: 'available', confirmedAdverseOutcomes90d: null,
+  }), 'new'); // an enabled-but-missing adjudication query fails closed
 });
 
 test('three deals with one counterparty remain new', () => {

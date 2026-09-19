@@ -2,6 +2,7 @@ import { t } from '../i18n/index.js';
 import { getJSON } from '../api.js';
 import { user, identity } from '../state.js';
 import { money, signed, bars, h } from '../fmt.js';
+import { legacyTransportModel } from './priceDetailModel.js';
 
 let qty = 5, calc = null, error = null, loading = false;
 
@@ -43,6 +44,14 @@ export default {
     if (!calc) { wrap.appendChild(h('msg', error || t('Loading…'))); return wrap; }
 
     const best = calc.truePrice?.highestNet;
+    const legacyTransport = legacyTransportModel(calc);
+    const legacyTransportRow = legacyTransport.kind === 'unknown'
+      ? [t('Transport'), t('not known')]
+      : legacyTransport.kind === 'extra_trip'
+        ? [t('Extra trip {a} vs {b}km', { a: legacyTransport.distanceKm, b: legacyTransport.fromDistanceKm }),
+          `${signed(-legacyTransport.transportPerQt, calc.currency)}/${t('qt')}`]
+        : [t('Transport ~{km}km', { km: legacyTransport.distanceKm }),
+          `${signed(-legacyTransport.transportPerQt, calc.currency)}/${t('qt')}`];
     const rows = calc.truePrice?.options?.length && best ? [
       ...calc.truePrice.options.map((option) => [
         `${option === best ? t('HIGHEST NET · ') : ''}${option.market}`,
@@ -58,8 +67,8 @@ export default {
     ] : [
       [t('{name} market', { name: calc.to }), `${money(calc.price_to, calc.currency)}/${t('qt')}`],
       [calc.from_distance_km > 25 ? `${t('Nearest')} · ${calc.from}` : t('Your area'), `${money(calc.price_from, calc.currency)}/${t('qt')}`],
-      [t('Transport'), t('not known')],
-      [t('Gain before transport'), `${signed(calc.gain_per_qt, calc.currency)}/${t('qt')}`],
+      legacyTransportRow,
+      [t(legacyTransport.gainLabel), `${signed(calc.gain_per_qt, calc.currency)}/${t('qt')}`],
       [`${t('For {n} qt', { n: calc.qty })}  ◄ ►`, signed(calc.gain_total, calc.currency)],
     ];
     rows.forEach(([a, b], i) => {
