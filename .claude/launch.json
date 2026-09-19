@@ -1,0 +1,39 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "agrilink-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "backend",
+        "run",
+        "forum:dev"
+      ],
+      "port": 3100
+    },
+    {
+      "name": "farm-dev",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "backend/dev/farmOpsDevServer.js"
+      ],
+      "port": 3101,
+      "env": {
+        "PORT": "3101"
+      }
+    },
+    {
+      "name": "prices-live",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "backend/dev/forumDevServer.js"
+      ],
+      "port": 3102,
+      "env": {
+        "PORT": "3102",
+        "MANDI_LIVE": "1"
+      }
+    }
+  ]
+}

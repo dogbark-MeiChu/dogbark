@@ -50,7 +50,7 @@ const router = createRouter({
   screens,
   els: { status: $('status'), content: $('content'), sl: $('sk-l'), sc: $('sk-c'), sr: $('sk-r') },
 });
-initKeypad(router.dispatch, { debug: new URLSearchParams(location.search).has('debug') });
+initKeypad(router.dispatch);
 try {
   const session = await getJSON('/api/auth/session');
   identity.profile = session.user;
