@@ -969,4 +969,7 @@ export default {
   "Signed out other phones: {n}": "Đã đăng xuất máy khác: {n}",
   "Verified Prices": "Giá đã xác minh",
   "Latest verified:": "Xác minh gần nhất:",
+  "Synced {time}": "Đồng bộ {time}",
+  "Syncing…": "Đang đồng bộ…",
+  "# Read aloud": "# Đọc to",
 };

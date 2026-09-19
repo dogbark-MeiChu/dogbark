@@ -969,4 +969,7 @@ export default {
   "Signed out other phones: {n}": "दूसरे फ़ोन साइन आउट: {n}",
   "Verified Prices": "सत्यापित भाव",
   "Latest verified:": "नवीनतम सत्यापित:",
+  "Synced {time}": "सिंक {time}",
+  "Syncing…": "सिंक हो रहा है…",
+  "# Read aloud": "# सुनें",
 };
