@@ -68,7 +68,7 @@ function switchCrop(ctx, delta) {
 
 export default {
   name: 'MarketPrices',
-  title: 'Market Prices',
+  title: 'Verified Prices',
   softCenter: { label: 'Detail' },
   initialFocus: () => lastIdx,
   onShow(ctx) {
@@ -94,11 +94,11 @@ export default {
       // Home is "your area" only when it is near; otherwise it is the nearest mandi with a price today.
       const far = data.home_from_you_km > 25;
       const label = i > 0 ? `${m.name}${away}` : far ? `${t('Nearest')} · ${m.name} · ${data.home_from_you_km}km` : `${t('Your area')} · ${m.name}`;
-      row.append(h('', label), h('dim', `${money(m.price, data.currency)}/${t('qt')} ${arrow}${when}`));
+      row.append(h('', label), h('dim', `${money(m.price, data.currency)}/${t('qt')} ${arrow}${when} · ${m.confidence?.grade || 'C'}`));
       wrap.appendChild(row);
     });
     const variety = data.variety && !['Common', 'Other', 'FAQ'].includes(data.variety) ? ` · ${data.variety}` : '';
-    wrap.appendChild(h('msg dim', `${t('Data:')} ${dataDate(data.date)} · ${sourceLabel(data.source)}${variety}`));
+    wrap.appendChild(h('msg dim', `${t('Latest verified:')} ${dataDate(data.date)} · ${sourceLabel(data.source)}${variety}`));
     wrap.appendChild(h('msg', `${t('Trend:')} ${trendReason(data.analysis.reason)}`));
     if (data.sample) wrap.appendChild(h('msg dim hide-small', t('Sample data')));
     return wrap;

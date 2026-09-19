@@ -8,6 +8,7 @@ import { createAuthService } from '../services/authService.js';
 import { authRouter } from '../routes/auth.js';
 import { createMarketRouter } from '../routes/market.js';
 import { forumErrorHandler } from '../middleware/errors.js';
+import { requestId } from '../middleware/requestId.js';
 
 const migration = (name) => fs.readFileSync(new URL(`../db/migrations/${name}`, import.meta.url), 'utf8');
 const ENV = { AUTH_LOOKUP_SECRET: 'x'.repeat(40), NODE_ENV: 'test' };
@@ -33,6 +34,7 @@ async function start() {
   const market = createMarketRouter({ pool, auth, env: ENV });
   const app = express();
   app.set('trust proxy', 'loopback');
+  app.use(requestId);
   app.use(express.json({ limit: '8kb' }));
   app.use('/api/auth', authRouter({ auth, pool }));
   app.use('/api/market', market.router);
@@ -100,6 +102,8 @@ test('market requires sign-in', async () => {
     const r = await t.client().get('/api/market/listings');
     assert.equal(r.status, 401);
     assert.equal(r.body.error.code, 'AUTH_REQUIRED');
+    const rep = await t.client().get('/api/market/users/00000000-0000-4000-8000-000000000000/reputation?role=buyer');
+    assert.equal(rep.status, 401);
   } finally { await t.close(); }
 });
 
@@ -175,6 +179,8 @@ test('offer → counter → accept → both confirm → schedule → code → re
     assert.equal(sch.body.status, 'pickup_scheduled');
     const bView = (await buyer.get(`/api/market/deals/${dealId}`)).body.item;
     const sView = (await seller.get(`/api/market/deals/${dealId}`)).body.item;
+    assert.equal(bView.counterpartyEvidence.role, 'seller');
+    assert.equal(sView.counterpartyEvidence.role, 'buyer');
     assert.match(bView.pickupCode, /^\d{4}$/);
     assert.equal(sView.pickupCode, undefined); // the seller never sees the code
     assert.equal(sView.pickup.location, 'Patna Central Market');
@@ -192,6 +198,8 @@ test('offer → counter → accept → both confirm → schedule → code → re
 
     const l = (await seller.get(`/api/market/listings/${listingId}`)).body.item;
     assert.equal(l.availableQuantity, 30);
+    assert.equal(l.ownerEvidence.role, 'seller');
+    assert.equal(l.ownerEvidence.completedDeals, 1);
     const row = (await t.db.query('SELECT reserved_quantity, sold_quantity FROM app.market_listings WHERE id=$1', [listingId])).rows[0];
     assert.equal(Number(row.reserved_quantity), 0);
     assert.equal(Number(row.sold_quantity), 90);
@@ -202,6 +210,23 @@ test('offer → counter → accept → both confirm → schedule → code → re
     assert.equal((await buyer.get(`/api/market/deals/${dealId}`)).body.item.ratedByMe, true);
     assert.equal((await seller.get(`/api/market/deals/${dealId}`)).body.item.ratedByMe, false);
     assert.equal((await buyer.post(`/api/market/deals/${dealId}/rating`, { stars: 4 })).body.error.code, 'CONFLICT');
+
+    // Reputation is server-derived, role-separated and contains no private deal fields.
+    const buyerRep = await seller.get(`/api/market/users/${buyer.id}/reputation?role=buyer`);
+    const sellerRep = await buyer.get(`/api/market/users/${seller.id}/reputation?role=seller`);
+    const buyerAsSeller = await buyer.get(`/api/market/users/${buyer.id}/reputation?role=seller`);
+    assert.equal(buyerRep.body.completedDeals, 1);
+    assert.equal(sellerRep.body.completedDeals, 1);
+    assert.equal(buyerAsSeller.body.completedDeals, 0);
+    assert.equal(buyerRep.body.averageRating, null); // one five-star review is not shown as a perfect average
+    assert.doesNotMatch(JSON.stringify(buyerRep.body), /phone|latitude|longitude|pickup|internal|secret/i);
+    const myRep = await buyer.get('/api/market/me/reputation');
+    assert.equal(myRep.body.buyer.completedDeals, 1);
+    assert.equal(myRep.body.seller.completedDeals, 0);
+
+    // Demo transactions can drive the visible walkthrough but never formal reputation.
+    await t.db.query('UPDATE app.market_listings SET is_demo=true WHERE id=$1', [listingId]);
+    assert.equal((await seller.get(`/api/market/users/${buyer.id}/reputation?role=buyer`)).body.completedDeals, 0);
 
     // audit trail exists
     const ev = await t.db.query("SELECT count(*)::int n FROM app.market_events WHERE entity_type='deal'");
@@ -241,6 +266,7 @@ test('offer rules: no self-offer, one live offer, fixed price, authorization', a
     assert.equal((await buyer.get(`/api/market/listings/${fixed}`)).body.item.myOfferId, null);
     const o = await buyer.post(`/api/market/listings/${fixed}/offers`, offerBody({ unitPrice: 30 }));
     assert.equal(o.status, 201);
+    assert.equal((await buyer.get(`/api/market/offers/${o.body.id}`)).body.item.counterpartyEvidence.role, 'seller');
     assert.equal((await buyer.post(`/api/market/listings/${fixed}/offers`, offerBody({ unitPrice: 30 }))).body.error.code, 'CONFLICT');
     // the detail tells the buyer where their live offer is (the owner never gets myOfferId)
     assert.equal((await buyer.get(`/api/market/listings/${fixed}`)).body.item.myOfferId, o.body.id);
@@ -251,6 +277,9 @@ test('offer rules: no self-offer, one live offer, fixed price, authorization', a
     assert.equal((await stranger.post(`/api/market/offers/${o.body.id}/accept`)).status, 404);
     assert.equal((await stranger.get('/api/market/deals/00000000-0000-4000-8000-000000000000')).status, 404);
     assert.equal((await stranger.get('/api/market/deals/not-a-uuid')).status, 404);
+    const badRep = await stranger.get('/api/market/users/not-a-uuid/reputation?role=buyer');
+    assert.equal(badRep.status, 404);
+    assert.ok(badRep.body.error.requestId);
     // decline frees the slot for a fresh offer
     assert.equal((await seller.post(`/api/market/offers/${o.body.id}/decline`, {})).status, 200);
     assert.equal((await buyer.post(`/api/market/listings/${fixed}/offers`, offerBody({ unitPrice: 30 }))).status, 201);

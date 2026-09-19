@@ -4,12 +4,14 @@ import { AppError, asyncHandler } from '../middleware/errors.js';
 import { sameOriginWrites } from '../middleware/sameOrigin.js';
 import { limitByUser, createLimiter } from '../middleware/rateLimits.js';
 import { createMarketService } from '../services/marketService.js';
+import { createReputationService } from '../services/reputationService.js';
 
 // Local Market API. Every route needs a signed-in member: listings are matched by the poster's
 // profile region, never by request IP. Cookie identity comes from routes/auth.js.
 export function createMarketRouter({ pool, auth, env = process.env, config }) {
   const limiter = createLimiter();
-  const market = createMarketService({ pool, limiter, env, config });
+  const reputation = createReputationService({ pool });
+  const market = createMarketService({ pool, limiter, env, config, reputation });
   const json = express.json({ limit: '8kb' });
   const router = Router();
 
@@ -59,6 +61,9 @@ export function createMarketRouter({ pool, auth, env = process.env, config }) {
   router.post('/deals/:id/payment-status', json, send((req) => market.paymentStatus(req.user, req.params.id, req.body?.status)));
   router.post('/deals/:id/cancel', json, send((req) => market.cancel(req.user, req.params.id, req.body?.reason)));
   router.post('/deals/:id/rating', json, send((req) => market.rate(req.user, req.params.id, req.body?.stars)));
+
+  router.get('/users/:userId/reputation', send((req) => market.getReputation(req.params.userId, req.query.role)));
+  router.get('/me/reputation', send((req) => market.getMyReputation(req.user)));
 
   router.get('/sync', send((req) => market.sync(req.user, req.query.since)));
 
