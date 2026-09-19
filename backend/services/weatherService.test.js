@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { getWeather, normalize, advise, buildUrl, _clearCache } from './weatherService.js';
+import { assessSprayConditions } from './sprayAssessment.js';
 
 const raw = {
   current: { time:'2026-09-19T09:00',temperature_2m: 27.6,relative_humidity_2m:72, precipitation: 0, weather_code: 1,wind_speed_10m:8.2,wind_gusts_10m:12.5 },
@@ -30,11 +31,15 @@ test('normalize maps 3 days and rounds temps', () => {
   assert.equal(w.current.rainProbabilityNext4h,20);
 });
 
-test('advice uses condition labels instead of telling the farmer to spray', () => {
-  assert.equal(advise(normalize(raw)).action, 'optimal');
+test('advice uses the same rules as the Today\'s Farm spray assessment', () => {
+  const w = normalize(raw);
+  assert.equal(advise(w).action, assessSprayConditions(w).overall);
+  assert.equal(advise(w).action, 'caution'); // 27.6°C: above 25°C
+  assert.match(advise(w).reason, /Above 25°C/);
   const wet = normalize(raw);
-  wet.daily[0].rain_prob = 80;
+  wet.current.rainProbabilityNext4h = 80;
   assert.equal(advise(wet).action, 'unsuitable');
+  assert.match(advise(wet).reason, /Rain likely/);
 });
 
 test('caches, and serves stale data when upstream fails', async () => {

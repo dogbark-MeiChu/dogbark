@@ -46,3 +46,7 @@
 /* Data served from a stale copy or sample data: always visible, never hidden on small screens. */
 .src-stale, .ops-stale { color: #ffb454 !important; }
 .item.focused .src-stale { color: #5a3300 !important; }
+/* Weather spray line: the same colours as the Today's Farm spray row. */
+.wx-spray { text-align: left; color: var(--fg); }
+.wx-caution { color: #ffb454; }
+.wx-unsuitable { color: #ff6b62; }

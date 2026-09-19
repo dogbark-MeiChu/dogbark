@@ -24,7 +24,7 @@ function typeStepParams() {
   };
 }
 
-function communityStepParams() {
+export function communityStepParams() {
   const d = draft();
   return {
     title: 'New post 2/7', note: 'Which community?', selected: d.community,

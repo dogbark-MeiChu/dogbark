@@ -326,6 +326,8 @@ export function createMarketService({ pool, limiter, env = process.env, config =
       target: { type: row.listing_id ? 'listing' : 'buy_request', id: row.listing_id || row.buy_request_id },
       crop: { code: row.crop_code, name: row.crop_name },
       counterparty: { displayName: mine ? row.recipient_name : row.proposer_name },
+      // An offer on a listing comes from a buyer; an offer on a buy request comes from a seller.
+      myRole: (row.listing_id ? mine : !mine) ? 'buyer' : 'seller',
       terms: {
         quantity: num(row.rv_quantity), unit: row.unit, unitPrice: num(row.rv_unit_price), currency: row.rv_currency,
         estimatedTotal: num(row.rv_total), pickupDate: row.rv_pickup_date,

@@ -27,6 +27,7 @@ import { startMarketSync } from './market/marketSync.js';
 import { MarketForm, MarketNumber, MarketText } from './market/marketForm.js';
 import { MarketHome, MarketFeed, MarketFilter, MarketDetail } from './market/marketScreens.js';
 import { MarketOffers, MarketOffer, MarketDeals, MarketDeal, MarketReason } from './market/marketTrades.js';
+import { TradeConfirm } from './market/tradeConfirm.js';
 import { CreatePostTitle, CreatePostBody, CreatePostTagsLoader, CreatePostPreview } from './screens/createPost.js';
 import { farmOpsScreens } from './screens/farmOps.js';
 
@@ -42,7 +43,7 @@ const screens = {
   AskAISources, AskAIMedia, AskAIPhoto, AskAIVoice, AskAIHistory,
   AuthWelcome, AuthPhone, AuthPin, ProfileName, ProfileVillage, ProfileRegion, AuthResult, Settings, ProfileSummary, LanguageSettings, CropSettings, WelcomeLanguage,
   ...farmerCircle,
-  MarketHome, MarketFeed, MarketFilter, MarketDetail, MarketForm, MarketNumber, MarketText, MarketOffers, MarketOffer, MarketDeals, MarketDeal, MarketReason,
+  MarketHome, MarketFeed, MarketFilter, MarketDetail, MarketForm, MarketNumber, MarketText, MarketOffers, MarketOffer, MarketDeals, MarketDeal, MarketReason, TradeConfirm,
   ...farmOpsScreens,
 };
 const $ = (id) => document.getElementById(id);

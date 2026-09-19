@@ -1,6 +1,8 @@
 import { t } from '../i18n/index.js';
 import { el, isCompact } from '../dom.js';
 import { ask, composer, saveAnswer, track } from '../askAI.js';
+import { forum, newDraft, saveDraft, requireAuth, resumeIntent } from '../forum/forumState.js';
+import { communityStepParams } from './createPost.js';
 
 // Structured answer: a fixed sequence of cards built from validated JSON.
 // Every string goes through textContent (see dom.js); nothing is parsed as markup.
@@ -149,11 +151,25 @@ function openFollowUp(ctx) {
   ctx.router.push('AskAIInput', { followUp: true, followUps: a.follow_ups });
 }
 
+// "3 Ask farmers": the question becomes a Farmer Circle post, already filled in (title = the
+// question, details = the question and the AI's short answer, so other farmers see what was
+// already suggested). It opens at the community step with Crop Talk chosen; Enter goes on.
 function askFarmers(ctx) {
-  // Carry the question over locally so Farmer Circle can prefill it when it exists.
-  try { localStorage.setItem('agrilink.circle.draft', ctx.params.question || ''); } catch { /* ignore */ }
   track('farmer_circle_escalated');
-  ctx.router.push('ComingSoon', { title: t('Farmer Circle') });
+  if (!requireAuth(ctx)) return;
+  const q = (ctx.params.question || '').trim();
+  // Only a real AI answer is worth quoting; the offline checklist is not what the AI said.
+  const r = ctx.params.result;
+  const summary = r?.meta?.fallback || r?.meta?.offline ? null : r?.answer?.summary;
+  const d = newDraft();
+  d.type = 'question';
+  d.community = 'crop-talk';
+  d.title = q.length > 80 ? `${q.slice(0, 79).replace(/\s+\S*$/, '')}…` : q;
+  d.body = (summary ? `${q}\n\n${t('AI said:')} ${summary}` : q).slice(0, 500);
+  saveDraft();
+  // After posting, the wizard returns here and opens the new post (resumeIntent in onShow).
+  forum.wizard = { origin: 'AskAIAnswer', depth: ctx.router.depth };
+  ctx.router.push('CreatePostCommunity', communityStepParams());
 }
 
 export default {
@@ -176,6 +192,7 @@ export default {
     return i < 0 ? 0 : i;
   },
 
+  onShow(ctx) { resumeIntent(ctx, 'AskAIAnswer'); }, // back from "Ask farmers": open the post just made
   onHide() { expanded.clear(); clearTimeout(toastTimer); },
 
   onKey(action, ctx) {

@@ -72,6 +72,9 @@ export function authRouter({ auth, pool }) {
       res.json({ ok: true });
     } catch (err) { next(err); }
   });
+  router.post('/logout-others', requireUser(auth), async (req, res, next) => {
+    try { res.json({ ok: true, ended: await auth.logoutOthers(sessionFromRequest(req)) }); } catch (err) { next(err); }
+  });
   router.patch('/profile', requireUser(auth), async (req, res, next) => {
     try {
       const { displayName, village, language, regionId, cropIds } = req.body || {};

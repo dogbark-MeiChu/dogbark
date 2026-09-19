@@ -153,6 +153,20 @@ export function createAuthService(pool, env = process.env) {
     if (/^[0-9a-f-]{36}$/.test(id)) await pool.query('UPDATE app.auth_sessions SET revoked_at=now() WHERE id=$1', [id]);
   }
 
+  // Lost or stolen phone: from the phone in hand, end every other session of this member.
+  // The session making the request stays signed in. Returns how many were ended.
+  async function logoutOthers(token) {
+    const [id, secret] = String(token ?? '').split('.');
+    if (!id || !secret || !/^[0-9a-f-]{36}$/.test(id)) return 0;
+    const r = await pool.query(
+      `UPDATE app.auth_sessions SET revoked_at=now()
+       WHERE revoked_at IS NULL AND id<>$1
+         AND user_id=(SELECT user_id FROM app.auth_sessions WHERE id=$1 AND secret_hash=$2 AND revoked_at IS NULL AND expires_at > now())`,
+      [id, digest(secret)],
+    );
+    return r.rowCount;
+  }
+
   async function profileFor(db, userId) {
     const result = await db.query(
       `SELECT u.id, u.role, u.status, p.display_name AS "displayName", p.village, p.region_id AS "regionId", r.name AS "regionName", p.language,
@@ -166,5 +180,5 @@ export function createAuthService(pool, env = process.env) {
     return result.rows[0] || null;
   }
 
-  return { signup, login, session, logout, profileFor, secureCookies };
+  return { signup, login, session, logout, logoutOthers, profileFor, secureCookies };
 }
