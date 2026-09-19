@@ -13,11 +13,27 @@ test('getPrices returns home market first with 3 markets and flags sample data',
   assert.equal(d.sample, true);
   assert.equal(d.unit, 'quintal');
   assert.equal(d.markets[0].trend.length, 7);
+  assert.equal(d.markets[0].district, 'Rampur');
+  assert.deepEqual(d.coverage, {
+    requested_region: 'IN-UP-01', price_region: 'IN-UP-01', state_fallback: false,
+    market_count: 3, shown_market_count: 3,
+  });
 });
 
 test('unknown crop or region -> null', async () => {
   assert.equal(await svc.getPrices({ crop: 'banana', region: 'IN-UP-01' }), null);
   assert.equal(await svc.getPrices({ crop: 'rice', region: 'XX-00' }), null);
+});
+
+test('crop coverage says when district prices fall back to the state', async () => {
+  const service = createPriceService({
+    async history() { return []; },
+    async crops(region) { return region === 'IN-UP' ? [{ code: 'rice', name: 'Rice', latest: '2026-09-19', sample: false }] : []; },
+  });
+  const out = await service.getCrops({ region: 'IN-UP-LKO' });
+  assert.equal(out.price_region, 'IN-UP');
+  assert.equal(out.state_fallback, true);
+  assert.equal(out.items[0].code, 'rice');
 });
 
 test('analyze reports facts without a sell/wait recommendation', () => {

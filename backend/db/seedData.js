@@ -13,9 +13,9 @@ export const CROPS = [
 
 // offset = price premium vs the home market; coordinates are approximate.
 export const MARKETS = [
-  { code: 'rampur', region: 'IN-UP-01', name: 'Rampur', lat: 28.8, lng: 79.03, offset: 0 },
-  { code: 'bareilly', region: 'IN-UP-01', name: 'Bareilly', lat: 28.37, lng: 79.43, offset: 0.09 },
-  { code: 'moradabad', region: 'IN-UP-01', name: 'Moradabad', lat: 28.84, lng: 78.78, offset: 0.03 },
+  { code: 'rampur', region: 'IN-UP-01', name: 'Rampur', district: 'Rampur', lat: 28.8, lng: 79.03, offset: 0 },
+  { code: 'bareilly', region: 'IN-UP-01', name: 'Bareilly', district: 'Bareilly', lat: 28.37, lng: 79.43, offset: 0.09 },
+  { code: 'moradabad', region: 'IN-UP-01', name: 'Moradabad', district: 'Moradabad', lat: 28.84, lng: 78.78, offset: 0.03 },
 ];
 
 const DAY = 86400000;

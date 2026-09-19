@@ -39,7 +39,7 @@ export default {
     head.style.padding = 'var(--pad)';
     // Daily sync builds the history one day at a time; a one-point "trend" would be noise.
     const trend = market.trend.length > 1 ? t('{bars} last {n} prices', { bars: bars(market.trend), n: market.trend.length }) : t('Trend appears after a few days of prices');
-    head.append(h('', `${t(cropLabel)} @ ${market.name}`), h('dim', trend));
+    head.append(h('', `${t(cropLabel)} @ ${market.name}${market.district && market.district !== market.name ? ` · ${market.district}` : ''}`), h('dim', trend));
     wrap.appendChild(head);
     if (!calc) { wrap.appendChild(h('msg', error || t('Loading…'))); return wrap; }
 

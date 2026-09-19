@@ -1,7 +1,7 @@
 import { MARKETS, CROPS, generatePrices } from '../db/seedData.js';
 
 // Both repos return the same row shape:
-// { market_code, market_name, lat, lng, date, modal, currency, unit, source, sample }
+// { market_code, market_name, district, lat, lng, date, modal, currency, unit, source, sample }
 export function memoryRepo(now = Date.now) {
   const rows = (regionCode) => {
     const markets = new Map(MARKETS.filter((m) => m.region === regionCode).map((m) => [m.code, m]));
@@ -10,7 +10,7 @@ export function memoryRepo(now = Date.now) {
   return {
     async history(cropCode, regionCode) {
       return rows(regionCode).filter((p) => p.crop === cropCode).map(({ m, ...p }) => ({
-        market_code: m.code, market_name: m.name, lat: m.lat, lng: m.lng, date: p.date,
+        market_code: m.code, market_name: m.name, district: m.district, lat: m.lat, lng: m.lng, date: p.date,
         modal: p.modal, currency: p.currency, unit: p.unit, source: 'seed', sample: p.sample,
       }));
     },
@@ -31,7 +31,7 @@ export function pgRepo(pool) {
     // Every variety is returned; the price service compares one variety at a time.
     async history(cropCode, regionCode) {
       const { rows } = await pool.query(
-        `SELECT m.code AS market_code, m.name AS market_name,
+        `SELECT m.code AS market_code, m.name AS market_name, m.district_name AS district,
                 m.latitude::float8 AS lat, m.longitude::float8 AS lng,
                 p.price_date::text AS date, p.modal_price::float8 AS modal, p.variety,
                 p.currency_code AS currency, p.price_unit AS unit, p.source, p.is_sample AS sample

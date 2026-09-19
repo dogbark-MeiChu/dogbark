@@ -86,8 +86,9 @@ export async function storeRows(pool, { stateName, regionCode, cropCode, cropNam
     for (const r of rows) {
       const code = marketCode(r);
       await db.query(
-        `INSERT INTO app.markets (region_id, code, name) SELECT id, $2, $3 FROM app.regions WHERE code = $1
-         ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name`, [regionCode, code, marketName(r.market)]);
+        `INSERT INTO app.markets (region_id, code, name, district_name) SELECT id, $2, $3, $4 FROM app.regions WHERE code = $1
+         ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, district_name = EXCLUDED.district_name`,
+        [regionCode, code, marketName(r.market), r.district]);
       const result = await db.query(
         `INSERT INTO app.market_prices (market_id, crop_id, variety, price_date, min_price, max_price, modal_price, currency_code, price_unit, source, is_sample)
          SELECT m.id, c.id, $3, $4::date, $5, $6, $7, 'INR', 'quintal', 'agmarknet', false

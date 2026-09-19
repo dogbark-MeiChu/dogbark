@@ -110,7 +110,7 @@ export function createPriceService(repo) {
     let markets = [...byMarket.values()].map((rows) => {
       const last = rows[rows.length - 1], prev = rows[rows.length - 2];
       return {
-        code: last.market_code, name: last.market_name, lat: last.lat, lng: last.lng,
+        code: last.market_code, name: last.market_name, district: last.district || null, lat: last.lat, lng: last.lng,
         price: last.modal, date: last.date, source: last.source, sample: last.sample,
         // Only against a recent previous price: a months-old one says nothing about today.
         change_pct: prev && dayGap(last.date, prev.date) <= RECENT_DAYS ? Math.round(((last.modal - prev.modal) / prev.modal) * 1000) / 10 : null,
@@ -134,6 +134,7 @@ export function createPriceService(repo) {
         observationCount: m.trend.length, varietyMatch: Boolean(byMarket.variety), modalPrice: m.price,
       });
     }
+    const marketCount = markets.length;
     // Home first, then by distance (unknown distances last, by name).
     markets.sort((a, b) => (a === homeMarket ? -1 : b === homeMarket ? 1
       : (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity) || a.name.localeCompare(b.name)));
@@ -149,6 +150,13 @@ export function createPriceService(repo) {
       home_from_you_km: here && hasPoint(homeMarket) ? Math.round(distanceKm(here, homeMarket) * ROAD_FACTOR) : null,
       source: homeMarket.source,
       sample: markets.some((m) => m.sample),
+      coverage: {
+        requested_region: region,
+        price_region: resolved.region,
+        state_fallback: resolved.region !== region,
+        market_count: marketCount,
+        shown_market_count: Math.min(marketCount, MAX_MARKETS),
+      },
       markets: markets.slice(0, MAX_MARKETS), analysis: analyze(recent),
     };
   }
@@ -197,12 +205,14 @@ export function createPriceService(repo) {
   /** Crops that have prices for the member (own region, else its state), newest first by date. */
   async function getCrops({ region }) {
     let list = await repo.crops(region);
+    let priceRegion = region;
     const parent = parentRegion(region);
     if (parent !== region && (!list.length || list.every((c) => c.sample))) {
       const state = await repo.crops(parent);
-      if (state.some((c) => !c.sample)) list = state;
+      if (state.some((c) => !c.sample)) { list = state; priceRegion = parent; }
     }
-    return { region, items: list.map(({ code, name, latest, sample }) => ({ code, name, latest, sample: Boolean(sample) })) };
+    return { region, price_region: priceRegion, state_fallback: priceRegion !== region,
+      items: list.map(({ code, name, latest, sample }) => ({ code, name, latest, sample: Boolean(sample) })) };
   }
 
   return { getPrices, getNetProfit, getCrops };

@@ -6,7 +6,7 @@ import { money, h } from '../fmt.js';
 // Prices follow the signed-in member: their region (a district resolves to its state on the
 // server), the mandi nearest to their region centre as "your area", and their own crops first.
 // Without a profile it falls back to the fixed demo region.
-let crops = null, cropsFor = null, ci = 0, data = null, error = null, loading = false, lastIdx = 0;
+let crops = null, cropCoverage = null, cropsFor = null, ci = 0, data = null, error = null, loading = false, lastIdx = 0;
 
 const region = () => identity.profile?.regionCode || user.region;
 const point = () => {
@@ -41,7 +41,8 @@ async function load(ctx) {
   loading = true; error = null;
   try {
     if (cropsFor !== region()) {
-      crops = orderCrops((await getJSON(`/api/prices/crops?region=${region()}`)).items);
+      cropCoverage = await getJSON(`/api/prices/crops?region=${region()}`);
+      crops = orderCrops(cropCoverage.items);
       cropsFor = region(); ci = 0;
     }
     if (!crops.length) { data = null; error = t('No mandi prices for your area yet.'); }
@@ -68,7 +69,7 @@ function switchCrop(ctx, delta) {
 
 export default {
   name: 'MarketPrices',
-  title: 'Verified Prices',
+  title: 'Market Prices',
   softCenter: { label: 'Detail' },
   initialFocus: () => lastIdx,
   onShow(ctx) {
@@ -81,6 +82,7 @@ export default {
     const crop = h('item');
     const many = crops?.length > 1;
     crop.append(h('', crops?.length ? `${many ? '◄ ' : ''}${t(crops[ci].name)}${many ? ' ►' : ''}` : t('Crop')));
+    if (crops?.length) crop.append(h('dim', `${ci + 1}/${crops.length}`));
     wrap.appendChild(crop);
 
     if (!data) { wrap.appendChild(h('msg', error || t('Loading…'))); return wrap; }
@@ -91,14 +93,18 @@ export default {
       // A market whose latest price is from another day than the home market says so.
       const when = m.days_from_home ? ` · ${shortDate(m.date)}` : '';
       const away = i > 0 && m.distance_km != null ? ` · ${m.distance_km}km` : '';
+      const district = m.district && m.district !== m.name ? ` · ${m.district}` : '';
       // Home is "your area" only when it is near; otherwise it is the nearest mandi with a price today.
       const far = data.home_from_you_km > 25;
-      const label = i > 0 ? `${m.name}${away}` : far ? `${t('Nearest')} · ${m.name} · ${data.home_from_you_km}km` : `${t('Your area')} · ${m.name}`;
+      const label = i > 0 ? `${m.name}${district}${away}` : far ? `${t('Nearest')} · ${m.name}${district} · ${data.home_from_you_km}km` : `${t('Your area')} · ${m.name}${district}`;
       row.append(h('', label), h('dim', `${money(m.price, data.currency)}/${t('qt')} ${arrow}${when} · ${m.confidence?.grade || 'C'}`));
       wrap.appendChild(row);
     });
-    const variety = data.variety && !['Common', 'Other', 'FAQ'].includes(data.variety) ? ` · ${data.variety}` : '';
-    wrap.appendChild(h('msg dim', `${t('Latest verified:')} ${dataDate(data.date)} · ${sourceLabel(data.source)}${variety}`));
+    const place = identity.profile?.regionName || region();
+    const scope = data.coverage?.state_fallback || cropCoverage?.state_fallback ? t('State coverage') : t('District coverage');
+    wrap.appendChild(h('msg dim', `${place} · ${scope} · ${data.coverage?.market_count || data.markets.length} ${t('mandis')} · ${crops.length} ${t('crops')}`));
+    wrap.appendChild(h('msg dim', data.variety ? `${t('Variety:')} ${data.variety}` : t('Variety not confirmed')));
+    wrap.appendChild(h('msg dim', `${t('Latest price:')} ${dataDate(data.date)} · ${sourceLabel(data.source)}`));
     wrap.appendChild(h('msg', `${t('Trend:')} ${trendReason(data.analysis.reason)}`));
     if (data.sample) wrap.appendChild(h('msg src-stale', t('Sample data'))); // shown on every screen size: judges and farmers must know
     return wrap;
