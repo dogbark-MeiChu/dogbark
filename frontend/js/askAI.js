@@ -1,3 +1,4 @@
+import { t } from './i18n/index.js';
 // Shared state and request pipeline for Ask AI. The five screens stay render-only;
 // everything that outlives a screen (composer contents, the in-flight request,
 // conversation id, local history) lives here.
@@ -36,11 +37,11 @@ export const composer = {
     this.audio = null;
   },
   get attachmentLabel() {
-    if (this.image) return this.image.isDemoSample ? 'DEMO PHOTO' : 'PHOTO READY';
+    if (this.image) return this.image.isDemoSample ? t('DEMO PHOTO') : t('PHOTO READY');
     if (this.audio) return this.audio.seconds
-      ? `VOICE ${String(this.audio.seconds).padStart(2, '0')}s`
-      : 'VOICE READY';
-    return 'NO ATTACHMENT';
+      ? `${t('VOICE')} ${String(this.audio.seconds).padStart(2, '0')}s`
+      : t('VOICE READY');
+    return t('NO ATTACHMENT');
   },
   get hasContent() { return Boolean(this.text.trim() || this.image || this.audio); },
 };
@@ -97,7 +98,7 @@ export function ask(ctx, {
   session.phase = 'thinking';
   session.error = null;
   session.presetId = presetId;
-  session.question = presetId ? ASK_AI_PRESETS.find((p) => p.id === presetId)?.label || '' : text;
+  session.question = presetId ? t(ASK_AI_PRESETS.find((p) => p.id === presetId)?.label || '') : text;
   session.controller = new AbortController();
   session.pending = { presetId, text, image, audio, followUp };
   track(followUp ? 'followup_selected' : presetId ? 'preset_selected' : 'text_submitted', {
@@ -160,7 +161,7 @@ export async function runPending() {
       return;
     }
     session.result = offlineResult(session.question, presetId);
-    session.error = err instanceof ApiError ? err : new ApiError('INTERNAL_ERROR', 'Something went wrong.');
+    session.error = err instanceof ApiError ? err : new ApiError('INTERNAL_ERROR', t('Something went wrong.'));
     session.phase = 'error';
     track('answer_fallback', { source: 'offline', code: session.error.code });
   }
@@ -185,11 +186,11 @@ const OFFLINE_STEPS = {
 export function guessIntent(text = '', presetId = null) {
   const preset = ASK_AI_PRESETS.find((p) => p.id === presetId);
   if (preset) return preset.intent;
-  const t = text.toLowerCase();
-  if (/(price|sell|market|mandi|rate)/.test(t)) return 'market_decision';
-  if (/(rain|spray|weather|wind|irrigat)/.test(t)) return 'weather_action';
-  if (/(subsid|scheme|government|loan|support)/.test(t)) return 'government_support';
-  if (/(leaf|leaves|pest|disease|yellow|spot|wilt|rot|insect)/.test(t)) return 'crop_diagnosis';
+  const lower = text.toLowerCase();
+  if (/(price|sell|market|mandi|rate)/.test(lower)) return 'market_decision';
+  if (/(rain|spray|weather|wind|irrigat)/.test(lower)) return 'weather_action';
+  if (/(subsid|scheme|government|loan|support)/.test(lower)) return 'government_support';
+  if (/(leaf|leaves|pest|disease|yellow|spot|wilt|rot|insect)/.test(lower)) return 'crop_diagnosis';
   return 'general';
 }
 
@@ -201,18 +202,18 @@ function offlineResult(question, presetId) {
     intent,
     transcript: null,
     answer: {
-      headline: 'Offline checklist',
-      summary: 'AI could not be reached. These steps are safe to start with.',
-      actions: OFFLINE_STEPS[intent].map((label) => ({ label, detail: '' })),
+      headline: t('Offline checklist'),
+      summary: t('AI could not be reached. These steps are safe to start with.'),
+      actions: OFFLINE_STEPS[intent].map((label) => ({ label: t(label), detail: '' })),
       reasons: [],
-      warnings: ['Confirm with a local expert before spending money.'],
+      warnings: [t('Confirm with a local expert before spending money.')],
       confidence: 'low',
       needs_better_photo: false,
       retake_instruction: null,
       context_used: [],
       sources: [],
       follow_ups: [],
-      disclaimer: 'AI guidance is not a substitute for a local agronomist.',
+      disclaimer: t('AI guidance is not a substitute for a local agronomist.'),
     },
     meta: { cached: false, sampleData: false, fallback: true, offline: true, latencyMs: 0 },
   };

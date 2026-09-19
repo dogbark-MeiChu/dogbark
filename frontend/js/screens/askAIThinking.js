@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import { el, isCompact } from '../dom.js';
 import { session, runPending, cancel } from '../askAI.js';
 
@@ -5,9 +6,9 @@ import { session, runPending, cancel } from '../askAI.js';
 function steps() {
   const s = [];
   const p = session.pending || {};
-  if (p.audio) s.push('Listening to voice');
-  if (p.image) s.push('Looking at photo');
-  s.push('Reading question', 'Checking context', 'Preparing steps');
+  if (p.audio) s.push(t('Listening to voice'));
+  if (p.image) s.push(t('Looking at photo'));
+  s.push(t('Reading question'), t('Checking context'), t('Preparing steps'));
   return s;
 }
 
@@ -43,7 +44,7 @@ export default {
     bar.appendChild(el('ai-progress-fill'));
     wrap.append(orb, label, bar);
     if (session.question && !isCompact()) wrap.appendChild(el('ai-echo', `“${session.question.slice(0, 80)}”`));
-    wrap.appendChild(el('ai-hint', 'Right key cancels'));
+    wrap.appendChild(el('ai-hint', t('Right key cancels')));
     return wrap;
   },
 

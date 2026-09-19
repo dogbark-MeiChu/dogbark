@@ -1,3 +1,4 @@
+import { t, dateLocale } from '../i18n/index.js';
 import { el } from '../dom.js';
 import { identity } from '../state.js';
 import { errorText, newRequestId, relTime } from '../forum/forumUtils.js';
@@ -7,18 +8,18 @@ export { newRequestId, relTime };
 
 export const UNITS = ['kg', 'bag', 'crate', 'quintal', 'ton'];
 export const PAYMENT_LABEL = {
-  cash_on_pickup: 'Cash on pickup', external_mobile_money: 'Mobile money (outside app)',
-  external_bank_transfer: 'Bank transfer (outside app)', pay_after_delivery: 'Pay after delivery',
+  cash_on_pickup: t('Cash on pickup'), external_mobile_money: t('Mobile money (outside app)'),
+  external_bank_transfer: t('Bank transfer (outside app)'), pay_after_delivery: t('Pay after delivery'),
 };
-export const FULFILL_LABEL = { pickup: 'Pickup', buyer_pickup: 'Buyer pickup', seller_delivery: 'Seller delivers', negotiable: 'Negotiable' };
-export const GRADE_LABEL = { A: 'Grade A', B: 'Grade B', C: 'Grade C', not_graded: 'Not graded', not_specified: 'Any grade' };
-export const PRICING_LABEL = { fixed: 'Fixed price', negotiable: 'Negotiable', request_offers: 'Request offers' };
+export const FULFILL_LABEL = { pickup: t('Pickup'), buyer_pickup: t('Buyer pickup'), seller_delivery: t('Seller delivers'), negotiable: t('Negotiable') };
+export const GRADE_LABEL = { A: t('Grade A'), B: t('Grade B'), C: t('Grade C'), not_graded: t('Not graded'), not_specified: t('Any grade') };
+export const PRICING_LABEL = { fixed: t('Fixed price'), negotiable: t('Negotiable'), request_offers: t('Request offers') };
 export const DEAL_STATUS = {
-  awaiting_confirmation: 'Awaiting confirmation', agreed: 'Agreed', pickup_scheduled: 'Pickup set', handed_over: 'Handed over',
-  completed: 'Completed', cancelled: 'Cancelled', no_show: 'No show', disputed: 'Disputed',
+  awaiting_confirmation: t('Awaiting confirmation'), agreed: t('Agreed'), pickup_scheduled: t('Pickup set'), handed_over: t('Handed over'),
+  completed: t('Completed'), cancelled: t('Cancelled'), no_show: t('No show'), disputed: t('Disputed'),
 };
-export const OFFER_STATUS = { open: 'Open', countered: 'Countered', accepted: 'Accepted', declined: 'Declined', withdrawn: 'Withdrawn', expired: 'Expired' };
-export const EVIDENCE_BAND = { new: 'New member', established: 'Established trader' };
+export const OFFER_STATUS = { open: t('Open (status)'), countered: t('Countered'), accepted: t('Accepted'), declined: t('Declined'), withdrawn: t('Withdrawn'), expired: t('Expired') };
+export const EVIDENCE_BAND = { new: t('New member'), established: t('Established trader') };
 
 // Numbers keep at most 3 decimals, without trailing zeros.
 export const fmtNum = (n) => String(Number(Number(n).toFixed(3)));
@@ -28,7 +29,7 @@ export const perUnit = (n, cur, unit) => `${money(n, cur)}/${unit}`;
 
 export function dateLabel(iso) {
   if (!iso) return '—';
-  return new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString(dateLocale, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
 }
 const localDay = (offset) => {
   const d = new Date(); d.setDate(d.getDate() + offset);
@@ -36,20 +37,20 @@ const localDay = (offset) => {
 };
 /** Date choices instead of typing dates on a keypad. */
 export const dayOptions = (count = 7) => Array.from({ length: count }, (_, i) => ({
-  value: localDay(i), label: `${i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : dateLabel(localDay(i))}${i < 2 ? ` · ${dateLabel(localDay(i))}` : ''}`,
+  value: localDay(i), label: `${i === 0 ? t('Today') : i === 1 ? t('Tomorrow') : dateLabel(localDay(i))}${i < 2 ? ` · ${dateLabel(localDay(i))}` : ''}`,
 }));
 export const WINDOWS = [
-  { label: 'Any time', value: null }, { label: '06:00–09:00', value: ['06:00', '09:00'] }, { label: '09:00–11:00', value: ['09:00', '11:00'] },
+  { label: t('Any time'), value: null }, { label: '06:00–09:00', value: ['06:00', '09:00'] }, { label: '09:00–11:00', value: ['09:00', '11:00'] },
   { label: '11:00–14:00', value: ['11:00', '14:00'] }, { label: '14:00–17:00', value: ['14:00', '17:00'] },
 ];
 export function timeLeft(iso, now = Date.now()) {
   const ms = new Date(iso).getTime() - now;
-  if (ms <= 0) return 'expired';
+  if (ms <= 0) return t('expired');
   const h = Math.floor(ms / 3600000);
-  if (h < 1) return `${Math.max(1, Math.floor(ms / 60000))} min left`;
-  return h < 48 ? `${h} h left` : `${Math.floor(h / 24)} days left`;
+  if (h < 1) return t('{n} min left', { n: Math.max(1, Math.floor(ms / 60000)) });
+  return h < 48 ? t('{n} h left', { n: h }) : t('{n} days left', { n: Math.floor(h / 24) });
 }
-export const windowLabel = (s, e) => (s && e ? `${s}–${e}` : 'Any time');
+export const windowLabel = (s, e) => (s && e ? `${s}–${e}` : t('Any time'));
 
 const SHOWN = ['INVALID_STATE', 'CONFLICT', 'QUANTITY_UNAVAILABLE', 'PICKUP_LOCKED', 'VALIDATION_ERROR', 'FORBIDDEN', 'RATE_LIMITED'];
 export const marketError = (err) => (SHOWN.includes(err?.code) && err.message ? err.message : errorText(err));
@@ -102,7 +103,7 @@ export function confirm(ctx, { title, note, yes, run }) {
   const parent = ctx.params;
   ctx.router.push('ForumPicker', {
     title, note,
-    options: [{ label: yes, value: true }, { label: 'No, go back', value: false }],
+    options: [{ label: yes, value: true }, { label: t('No, go back'), value: false }],
     onPick(o, c) { parent.pending = o.value ? run : null; c.router.pop(); },
   });
 }
@@ -114,13 +115,13 @@ export function runPending(ctx) {
 export const row = (n, label, value) => {
   const r = el('item forum-choice');
   r.appendChild(el('forum-choice-n', n == null ? '·' : String(n), 'span'));
-  r.appendChild(el('forum-choice-label', label, 'span'));
+  r.appendChild(el('forum-choice-label', t(label), 'span'));
   if (value) r.appendChild(el('forum-choice-value', value, 'span'));
   return r;
 };
 export const line = (label, value) => {
   const d = el('market-line');
-  d.appendChild(el('market-k', label, 'span'));
+  d.appendChild(el('market-k', t(label), 'span'));
   d.appendChild(el('market-v', value, 'span'));
   return d;
 };

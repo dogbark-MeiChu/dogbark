@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import { el, isCompact } from '../dom.js';
 import { ask, composer, saveAnswer, track } from '../askAI.js';
 
@@ -30,10 +31,10 @@ function bullets(parent, items, numbered = false) {
 
 function trustChips(meta = {}, error) {
   const chips = [];
-  if (meta.offline || error) chips.push(['OFFLINE', 'warn']);
-  else if (meta.fallback) chips.push(['BASIC TIPS', 'warn']);
-  if (meta.stale) chips.push(['CACHED', 'dim']);
-  if (meta.sampleData) chips.push(['SAMPLE DATA', 'dim']);
+  if (meta.offline || error) chips.push([t('OFFLINE'), 'warn']);
+  else if (meta.fallback) chips.push([t('BASIC TIPS'), 'warn']);
+  if (meta.stale) chips.push([t('CACHED'), 'dim']);
+  if (meta.sampleData) chips.push([t('SAMPLE DATA'), 'dim']);
   return chips;
 }
 
@@ -44,14 +45,14 @@ function buildCards(params) {
   const compact = isCompact();
 
   if (error) {
-    const c = card('error', retry ? '⟳ Retry' : 'Could not reach AI');
+    const c = card('error', retry ? t('⟳ Retry') : t('Could not reach AI'));
     c.appendChild(el('ai-card-body', error.message));
-    if (retry) c.appendChild(el('ai-hint', 'Press Enter to try again'));
+    if (retry) c.appendChild(el('ai-hint', t('Press Enter to try again')));
     cards.push(c);
   }
 
   if (result.transcript) {
-    const c = card('heard', 'We heard');
+    const c = card('heard', t('We heard'));
     c.appendChild(el('ai-card-body', `“${result.transcript}”`));
     cards.push(c);
   } else if (question && !compact) {
@@ -60,23 +61,23 @@ function buildCards(params) {
   }
 
   if (a.needs_better_photo && a.retake_instruction) {
-    const c = card('retake', 'Retake photo');
+    const c = card('retake', t('Retake photo'));
     c.appendChild(el('ai-card-body', a.retake_instruction));
     cards.push(c);
   }
 
-  const bottom = card('bottom', 'Bottom line');
+  const bottom = card('bottom', t('Bottom line'));
   const chips = trustChips(result.meta, error);
   if (chips.length) {
     const row = el('ai-chips');
-    chips.forEach(([t, tone]) => row.appendChild(el(`ai-chip ${tone}`, t)));
+    chips.forEach(([label, tone]) => row.appendChild(el(`ai-chip ${tone}`, label)));
     bottom.appendChild(row);
   }
   bottom.appendChild(el('ai-headline', a.headline));
   if (!compact) bottom.appendChild(el('ai-card-body', a.summary));
   cards.push(bottom);
 
-  const now = card('now', 'Do now');
+  const now = card('now', t('Do now'));
   a.actions.forEach((act, i) => {
     const row = el('ai-line');
     const text = el('ai-line-text');
@@ -89,14 +90,14 @@ function buildCards(params) {
 
   // Optional cards start collapsed; Enter opens them. Warnings are always open.
   if (a.warnings.length) {
-    const c = card('warning', '⚠ Watch for', { cls: 'ai-warning' });
+    const c = card('warning', t('⚠ Watch for'), { cls: 'ai-warning' });
     bullets(c, a.warnings);
     cards.push(c);
   }
   const optional = [
-    ['why', 'Why', a.reasons],
-    ['context', 'Local context', a.context_used],
-    ['sources', `Sources (${a.sources.length})`, a.sources.map((s) => s.label)],
+    ['why', t('Why'), a.reasons],
+    ['context', t('Local context'), a.context_used],
+    ['sources', t('Sources ({n})', { n: a.sources.length }), a.sources.map((s) => s.label)],
   ];
   for (const [kind, title, items] of optional) {
     if (!items.length) continue;
@@ -107,22 +108,22 @@ function buildCards(params) {
   }
 
   if (a.follow_ups.length) {
-    const c = card('followups', compact ? '1 Follow-up' : 'Ask next (1)', { cls: 'ai-followup' });
+    const c = card('followups', t(compact ? '1 Follow-up' : 'Ask next (1)'), { cls: 'ai-followup' });
     bullets(c, a.follow_ups);
     cards.push(c);
   }
 
-  const foot = el('ai-disclaimer', compact ? '2 Src · 3 Ask farmers · * Save' : `${a.disclaimer} · 2 Sources · 3 Ask farmers · * Save`);
+  const foot = el('ai-disclaimer', compact ? t('2 Src · 3 Ask farmers · * Save') : `${a.disclaimer} · ${t('2 Sources · 3 Ask farmers · * Save')}`);
   cards.push(foot);
   return cards;
 }
 
 function toast(ctx, text) {
-  let t = ctx.root.querySelector('.ai-toast');
-  if (!t) { t = el('ai-toast'); ctx.root.appendChild(t); }
-  t.textContent = text;
+  let node = ctx.root.querySelector('.ai-toast');
+  if (!node) { node = el('ai-toast'); ctx.root.appendChild(node); }
+  node.textContent = text;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.remove(), 1500);
+  toastTimer = setTimeout(() => node.remove(), 1500);
 }
 
 // Moves within a tall card before moving between cards.
@@ -152,13 +153,13 @@ function askFarmers(ctx) {
   // Carry the question over locally so Farmer Circle can prefill it when it exists.
   try { localStorage.setItem('agrilink.circle.draft', ctx.params.question || ''); } catch { /* ignore */ }
   track('farmer_circle_escalated');
-  ctx.router.push('ComingSoon', { title: 'Farmer Circle' });
+  ctx.router.push('ComingSoon', { title: t('Farmer Circle') });
 }
 
 export default {
   name: 'AskAIAnswer',
   title: () => (isCompact() ? 'AI' : 'AI Answer'),
-  statusBadge: (ctx) => (ctx.params?.result?.answer?.confidence || 'low').toUpperCase(),
+  statusBadge: (ctx) => t((ctx.params?.result?.answer?.confidence || 'low').toUpperCase()),
   softLeft: { label: () => (isCompact() ? 'F-up' : 'Follow-up'), handler: (ctx) => openFollowUp(ctx) },
   softCenter: { label: 'More' },
   softRight: { label: 'Back', handler: (ctx) => ctx.router.pop() },
@@ -186,7 +187,7 @@ export default {
       case 'NUM_1': openFollowUp(ctx); return true;
       case 'NUM_2': ctx.router.push('AskAISources', { sources: ctx.params.result.answer.sources }); return true;
       case 'NUM_3': askFarmers(ctx); return true;
-      case 'STAR': toast(ctx, saveAnswer(ctx.params.question, ctx.params.result.answer) ? 'Saved on phone' : 'Nothing to save'); return true;
+      case 'STAR': toast(ctx, saveAnswer(ctx.params.question, ctx.params.result.answer) ? t('Saved on phone') : t('Nothing to save')); return true;
       default:
         return action.startsWith('NUM_'); // ignore other digits
     }
@@ -218,7 +219,7 @@ export const AskAISources = {
     const wrap = el('ai-screen list');
     const sources = ctx.params?.sources || [];
     if (!sources.length) {
-      wrap.appendChild(el('msg', 'No external sources. Answer uses your farm context only.'));
+      wrap.appendChild(el('msg', t('No external sources. Answer uses your farm context only.')));
       return wrap;
     }
     sources.forEach((s, i) => {

@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import { el } from '../dom.js';
 import { createTextEntry } from '../forum/textEntry.js';
 import { loadingView } from '../forum/ui.js';
@@ -25,18 +26,18 @@ export const MarketForm = {
     const p = ctx.params;
     ctx.root.classList.add('forum-scroll');
     const wrap = el('forum-screen');
-    if (p.busy) { wrap.appendChild(loadingView('Sending…')); return wrap; }
-    if (p.intro) wrap.appendChild(el('forum-note', p.intro));
+    if (p.busy) { wrap.appendChild(loadingView(t('Sending…'))); return wrap; }
+    if (p.intro) wrap.appendChild(el('forum-note', t(p.intro)));
     const list = el('list');
     visible(p).forEach((f, i) => {
-      const r = row(i < 9 ? i + 1 : null, f.label, shown(f, p.values));
+      const r = row(i < 9 ? i + 1 : null, t(f.label), shown(f, p.values));
       if (p.errorField === f.key) r.classList.add('market-bad');
       list.appendChild(r);
     });
     // The error sits right above the submit row, which keeps focus after a failed send, so it is
     // on screen at 240x320 instead of below a long form.
     if (p.error) list.appendChild(el('forum-error-text', p.error));
-    const submit = el('item forum-retry', `✓ ${p.submitLabel}`);
+    const submit = el('item forum-retry', `✓ ${t(p.submitLabel)}`);
     list.appendChild(submit);
     wrap.appendChild(list);
     return wrap;
@@ -68,7 +69,7 @@ function choose(ctx, i) {
 async function submit(ctx) {
   const p = ctx.params;
   const missing = visible(p).find((f) => !f.optional && (p.values[f.key] == null || p.values[f.key] === ''));
-  if (missing) { p.error = `Fill in: ${missing.label}`; p.errorField = missing.key; p.focusIndex = visible(p).indexOf(missing); return ctx.rerender(); }
+  if (missing) { p.error = t('Fill in: {field}', { field: t(missing.label) }); p.errorField = missing.key; p.focusIndex = visible(p).indexOf(missing); return ctx.rerender(); }
   p.busy = true; p.error = null; p.errorField = null;
   const root = ctx.root;
   ctx.rerender();
@@ -97,10 +98,10 @@ export const MarketNumber = {
     const p = ctx.params;
     num = { text: p.initial != null ? String(p.initial) : '', node: null, hint: null };
     const wrap = el('forum-screen');
-    wrap.appendChild(el('forum-label', p.title));
+    wrap.appendChild(el('forum-label', t(p.title)));
     num.node = el('forum-pin-input');
     wrap.appendChild(num.node);
-    num.hint = el('forum-hint', p.decimals > 0 ? '* delete · # decimal point · OK to save' : '* delete · OK to save');
+    num.hint = el('forum-hint', t(p.decimals > 0 ? '* delete · # decimal point · OK to save' : '* delete · OK to save'));
     wrap.appendChild(num.hint);
     paint();
     return wrap;
@@ -123,8 +124,8 @@ const paint = () => { if (num?.node) num.node.textContent = num.text || '_'; };
 function finish(ctx) {
   const p = ctx.params;
   const text = num.text.replace(/\.$/, '');
-  if (!text || Number.isNaN(Number(text))) { num.hint.textContent = 'Enter a number first'; return; }
-  if (p.exactLength && text.length !== p.exactLength) { num.hint.textContent = `Enter ${p.exactLength} digits`; return; }
+  if (!text || Number.isNaN(Number(text))) { num.hint.textContent = t('Enter a number first'); return; }
+  if (p.exactLength && text.length !== p.exactLength) { num.hint.textContent = t('Enter {n} digits', { n: p.exactLength }); return; }
   p.onDone(p.exactLength ? text : Number(text), ctx);
 }
 
@@ -139,14 +140,14 @@ export const MarketText = {
     const p = ctx.params;
     entry?.dispose();
     entry = createTextEntry({
-      max: p.max, min: p.min, initial: p.initial, placeholder: 'Type here…',
+      max: p.max, min: p.min, initial: p.initial, placeholder: t('Type here…'),
       onDone: (v) => {
-        if (v.length < p.min) return entry.hint(`Write at least ${p.min} characters`);
+        if (v.length < p.min) return entry.hint(t('Write at least {n} characters', { n: p.min }));
         p.onDone(v, ctx);
       },
     });
     const wrap = el('forum-screen forum-form-step');
-    wrap.appendChild(el('forum-label', `${p.title} (no links)`));
+    wrap.appendChild(el('forum-label', t('{title} (no links)', { title: t(p.title) })));
     wrap.appendChild(entry.render());
     return wrap;
   },

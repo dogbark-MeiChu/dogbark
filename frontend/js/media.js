@@ -1,3 +1,4 @@
+import { t } from './i18n/index.js';
 // Camera and microphone access, behind capability checks. Nothing here assumes a
 // Cloud Phone runtime exposes either: every entry point reports what is possible
 // so the UI can show a real disabled state instead of failing at press time.
@@ -83,7 +84,7 @@ export function pickAudio() {
       const file = input.files?.[0];
       if (!file) return done(resolve, null);
       if (file.size > MAX_AUDIO_BYTES) {
-        return done(reject, new Error('Recording is too large. Keep it under 30 seconds.'));
+        return done(reject, new Error(t('Recording is too large. Keep it under 30 seconds.')));
       }
       return done(resolve, file);
     });
@@ -115,7 +116,7 @@ export function pickPhoto() {
       const file = input.files?.[0];
       if (!file) return done(resolve, null);
       try {
-        if (file.size > MAX_SOURCE_BYTES) throw new Error('Photo is too large.');
+        if (file.size > MAX_SOURCE_BYTES) throw new Error(t('Photo is too large.'));
         done(resolve, await compressImage(file));
       } catch (err) { done(reject, err); }
     });
@@ -134,7 +135,7 @@ async function decode(file) {
     return await new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error('Photo could not be read.'));
+      img.onerror = () => reject(new Error(t('Photo could not be read.')));
       img.src = url;
     });
   } finally {
@@ -157,14 +158,14 @@ export async function compressImage(file) {
   let blob = await toBlob(canvas, JPEG_QUALITY);
   // One retry at lower quality rather than refusing a photo the farmer just took.
   if (blob.size > MAX_IMAGE_BYTES) blob = await toBlob(canvas, 0.55);
-  if (blob.size > MAX_IMAGE_BYTES) throw new Error('Photo is too large. Try again in daylight.');
+  if (blob.size > MAX_IMAGE_BYTES) throw new Error(t('Photo is too large. Try again in daylight.'));
   return { blob, width: canvas.width, height: canvas.height, previewUrl: URL.createObjectURL(blob) };
 }
 
 function toBlob(canvas, quality) {
   return new Promise((resolve, reject) => {
-    if (!canvas.toBlob) return reject(new Error('Photo could not be prepared.'));
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Photo could not be prepared.'))), 'image/jpeg', quality);
+    if (!canvas.toBlob) return reject(new Error(t('Photo could not be prepared.')));
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error(t('Photo could not be prepared.')))), 'image/jpeg', quality);
   });
 }
 

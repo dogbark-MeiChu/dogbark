@@ -25,6 +25,17 @@ const text = (v, field, max = 120) => {
 };
 const json = (v) => v == null ? null : v;
 
+// What the dashboard's weather row shows for the chosen day: the conditions now for today, that
+// day's forecast within the next week, and nothing (said plainly) for other days.
+export function dayWeather(weather, day) {
+  if (!weather) return null;
+  const today = weather.current?.time ? String(weather.current.time).slice(0, 10) : null;
+  if (!today || day === today) return { basis: 'now', date: day };
+  const d = (weather.daily || []).find((x) => x.date === day);
+  if (!d) return { basis: day < today ? 'past' : 'beyond', date: day };
+  return { basis: 'forecast', date: day, code: d.code, tmin: d.tmin, tmax: d.tmax, rainProb: d.rain_prob, rainMm: d.rain_mm, windMax: d.wind_max ?? null };
+}
+
 export function createFarmOpsService(pool, { farmPriceService = null, weatherGetter = null } = {}) {
   async function membership(userId, farmId, roles = ROLES) {
     const r = await pool.query(`SELECT f.*, m.role FROM app.farms f JOIN app.farm_members m ON m.farm_id=f.id
@@ -49,6 +60,7 @@ export function createFarmOpsService(pool, { farmPriceService = null, weatherGet
 
   async function farms(user) {
     const r = await pool.query(`SELECT f.id,f.name,f.timezone,f.country_code,f.region_code,m.role,
+      (SELECT name FROM app.regions WHERE code=f.region_code) region_name,
       (SELECT count(*)::int FROM app.farm_tasks t WHERE t.farm_id=f.id AND t.local_date=(now() AT TIME ZONE f.timezone)::date
        AND t.status NOT IN ('completed','verified','cancelled','skipped')) open_tasks
       FROM app.farms f JOIN app.farm_members m ON m.farm_id=f.id
@@ -56,20 +68,28 @@ export function createFarmOpsService(pool, { farmPriceService = null, weatherGet
     return { items: r.rows };
   }
 
-  // A member with no farm would otherwise hit a dead end, so they can start their own. The farm
-  // takes the profile's region and a country timezone; calling again returns the same farm.
+  // A farmer can run several farms (their own plots, a family farm, a cooperative). A farm takes a
+  // name and a region (default: the profile's), whose centre point gives it weather and nearby
+  // mandis, and the region's country timezone. The same name again returns the existing farm, so a
+  // repeated keypad submit never makes a second copy.
   const TIMEZONES = { IN: 'Asia/Kolkata', VN: 'Asia/Ho_Chi_Minh', BD: 'Asia/Dhaka', TW: 'Asia/Taipei' };
-  async function createFarm(user) {
+  const MAX_OWNED_FARMS = 10;
+  async function createFarm(user, body = {}) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
       await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`farm-owner:${user.id}`]);
-      const existing = (await client.query(`SELECT id FROM app.farms WHERE owner_user_id=$1 AND status='active' ORDER BY created_at LIMIT 1`, [user.id])).rows[0];
+      const profile = (await client.query(`SELECT p.display_name, r.code FROM app.user_profiles p
+        JOIN app.regions r ON r.id=p.region_id WHERE p.user_id=$1`, [user.id])).rows[0];
+      if (!profile) fail('PROFILE_REQUIRED', 'Complete your profile first.');
+      const name = body.name == null || body.name === '' ? `${profile.display_name}'s farm`.slice(0, 80) : text(body.name, 'name', 80);
+      const existing = (await client.query(`SELECT id FROM app.farms WHERE owner_user_id=$1 AND status='active' AND lower(name)=lower($2)`, [user.id, name])).rows[0];
       if (existing) { await client.query('COMMIT'); return { id: existing.id, duplicate: true }; }
-      const region = (await client.query(`SELECT r.code, r.country_code, r.latitude, r.longitude, p.display_name
-        FROM app.user_profiles p JOIN app.regions r ON r.id=p.region_id WHERE p.user_id=$1`, [user.id])).rows[0];
-      if (!region) fail('PROFILE_REQUIRED', 'Complete your profile first.');
-      const name = `${region.display_name}'s farm`.slice(0, 80);
+      const owned = (await client.query(`SELECT count(*)::int n FROM app.farms WHERE owner_user_id=$1 AND status='active'`, [user.id])).rows[0].n;
+      if (owned >= MAX_OWNED_FARMS) throw validation(`You can own up to ${MAX_OWNED_FARMS} farms.`, 'name');
+      const regionCode = body.regionCode == null || body.regionCode === '' ? profile.code : String(body.regionCode);
+      const region = (await client.query('SELECT code, country_code, latitude, longitude FROM app.regions WHERE code=$1', [regionCode])).rows[0];
+      if (!region) throw validation('Choose a region.', 'regionCode');
       const farm = (await client.query(`INSERT INTO app.farms(name,owner_user_id,country_code,region_code,timezone,latitude,longitude)
         VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
       [name, user.id, region.country_code, region.code, TIMEZONES[region.country_code] || 'UTC', region.latitude, region.longitude])).rows[0];
@@ -87,28 +107,42 @@ export function createFarmOpsService(pool, { farmPriceService = null, weatherGet
       ` ORDER BY CASE t.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END, t.start_at NULLS LAST, t.created_at`, [farmId, day])).rows.map(shapeTask);
     const section = { blocked: [], overdue: [], inProgress: [], due: [], unassigned: [], completed: [] };
     for (const t of rows) {
+      // Work someone is still doing is "in progress", even when it started on an earlier day.
       if (t.status === 'blocked') section.blocked.push(t);
-      else if (t.localDate < day && !['completed','verified'].includes(t.status)) section.overdue.push(t);
       else if (t.status === 'in_progress') section.inProgress.push(t);
+      else if (t.localDate < day && !['completed','verified'].includes(t.status)) section.overdue.push(t);
       else if (['completed','verified'].includes(t.status)) section.completed.push(t);
       else if (!t.assignments.length) section.unassigned.push(t);
       else section.due.push(t);
     }
     const todays = rows.filter((t) => t.localDate === day);
+    const crops = await farmCrops(farm, user);
     const [weather, prices, communityActivity] = await Promise.all([
       weatherForFarm(farm),
-      farmPriceService?.getFarmPrices(farm, 'rice').catch(() => null) || null,
+      Promise.all(crops.map((crop) => (farmPriceService ? farmPriceService.getFarmPrices(farm, crop).catch(() => null) : null))),
       communityFor(user, day),
     ]);
-    const sprayAssessment = todays.some((t) => ['spraying','fertilizer'].includes(t.type)) && weather ? assessSprayConditions(weather) : null;
+    const marketSnapshots = prices.map(marketSnapshot).filter(Boolean);
+    const sprayAssessment = todays.some((t) => ['spraying','fertilizer'].includes(t.type)) && weather ? assessSprayConditions(weather, { date: day }) : null;
     return { farm: { id: farm.id, name: farm.name, timezone: farm.timezone, role: farm.role }, date: day,
-      weather, sprayAssessment, marketSnapshot: marketSnapshot(prices), communityActivity, alerts: [],
+      weather, weatherDay: dayWeather(weather, day), sprayAssessment, marketSnapshot: marketSnapshots[0] || null, marketSnapshots, communityActivity, alerts: [],
       sections: { ...section, dueToday: section.due, completedToday: section.completed },
       summary: { total: todays.filter((t) => !['cancelled','skipped'].includes(t.status)).length,
         completed: todays.filter((t) => ['completed','verified'].includes(t.status)).length,
         inProgress: todays.filter((t) => t.status === 'in_progress').length,
         blocked: todays.filter((t) => t.status === 'blocked').length,
         pending: todays.filter((t) => !['completed','verified','cancelled','skipped','in_progress','blocked'].includes(t.status)).length } };
+  }
+
+  // The crops this farm grows (its planned and active crop cycles, earliest planted first); a farm
+  // with no cycles yet uses the member's own crops, and rice when there are none. At most three.
+  async function farmCrops(farm, user) {
+    const r = await pool.query(`SELECT crop_code FROM app.crop_cycles WHERE farm_id=$1 AND status IN ('planned','active')
+      GROUP BY crop_code ORDER BY min(planting_date) NULLS LAST, crop_code`, [farm.id]);
+    const list = r.rows.map((x) => x.crop_code);
+    if (!list.length) list.push(...(user.cropCodes || []));
+    if (!list.length) list.push('rice');
+    return [...new Set(list)].slice(0, 3);
   }
 
   async function weatherForFarm(farm) {
@@ -147,7 +181,8 @@ export function createFarmOpsService(pool, { farmPriceService = null, weatherGet
       AND type IN ('spraying','fertilizer') AND status NOT IN ('cancelled','skipped') LIMIT 1`, [farmId, day])).rowCount;
     if (!exists) return null;
     const weather = await weatherForFarm(farm);
-    return weather ? { sprayAssessment: assessSprayConditions(weather), weather } : null;
+    const assessment = weather ? assessSprayConditions(weather, { date: day }) : null;
+    return assessment ? { sprayAssessment: assessment, weather } : null;
   }
 
   async function calendar(user, farmId, q) {
@@ -173,6 +208,10 @@ export function createFarmOpsService(pool, { farmPriceService = null, weatherGet
     if (q.to) { params.push(dateOnly(q.to, 'to')); where.push(`t.local_date <= $${params.length}::date`); }
     if (q.mine === 'true') { params.push(user.id); where.push(`EXISTS (SELECT 1 FROM app.farm_task_assignments ma WHERE ma.task_id=t.id AND ma.user_id=$${params.length} AND ma.status<>'removed')`); }
     if (q.status) { params.push(q.status); where.push(`t.status=$${params.length}`); }
+    // One member's or one field's work, e.g. for the Team and Fields detail screens.
+    if (q.assignee) { params.push(String(q.assignee)); where.push(`EXISTS (SELECT 1 FROM app.farm_task_assignments aa WHERE aa.task_id=t.id AND aa.user_id::text=$${params.length} AND aa.status<>'removed')`); }
+    if (q.field) { params.push(String(q.field)); where.push(`t.field_id::text=$${params.length}`); }
+    if (q.open === 'true') where.push(`t.status NOT IN ('completed','verified','cancelled','skipped')`);
     const rows = (await pool.query(taskSelect + ` WHERE ${where.join(' AND ')}` + taskGroup + ` ORDER BY t.local_date,t.start_at NULLS LAST`, params)).rows.map(shapeTask);
     return { items: rows };
   }
@@ -188,7 +227,7 @@ export function createFarmOpsService(pool, { farmPriceService = null, weatherGet
     ]);
     const weather = ['spraying','fertilizer'].includes(r.rows[0].type) ? await weatherForFarm(farm) : null;
     return { item: shapeTask(r.rows[0]), checklist: checklist.rows, events: events.rows, result: result.rows[0] || null,
-      sprayAssessment: weather ? assessSprayConditions(weather) : null };
+      sprayAssessment: weather ? assessSprayConditions(weather, { date: isoDate(r.rows[0].local_date) }) : null };
   }
 
   async function createTask(user, farmId, b) {
@@ -224,7 +263,8 @@ export function createFarmOpsService(pool, { farmPriceService = null, weatherGet
     } catch (e) { await client.query('ROLLBACK').catch(() => {}); throw e; } finally { client.release(); }
   }
 
-  async function transition(user, id, to, body = {}) {
+  async function transition(user, id, requested, body = {}) {
+    let to = requested;
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -234,6 +274,9 @@ export function createFarmOpsService(pool, { farmPriceService = null, weatherGet
       const manager = MANAGE.has(farm.role);
       const assigned = (await client.query(`SELECT 1 FROM app.farm_task_assignments WHERE task_id=$1 AND user_id=$2 AND status<>'removed'`, [id, user.id])).rows[0];
       if (!manager && !assigned) fail('ROLE_REQUIRED', 'This task is not assigned to you.');
+      // Unblocking hands the work back to whoever had it, or to the schedule when no one did.
+      if (task.status === 'blocked' && to === 'assigned' && !(await client.query(
+        `SELECT 1 FROM app.farm_task_assignments WHERE task_id=$1 AND status<>'removed' LIMIT 1`, [id])).rows[0]) to = 'scheduled';
       const allowed = TRANSITIONS[task.status] || [];
       if (!allowed.includes(to)) fail('INVALID_STATUS_TRANSITION', `Cannot change ${task.status} to ${to}.`);
       if (['verified','cancelled','assigned','scheduled'].includes(to) && !manager) fail('ROLE_REQUIRED', 'A manager is required for this action.');
@@ -257,11 +300,66 @@ export function createFarmOpsService(pool, { farmPriceService = null, weatherGet
       if (to === 'completed') sets.push('completed_at=now()');
       if (to === 'verified') { sets.push('verified_at=now()'); params.push(user.id); sets.push(`verified_by=$${params.length}`); }
       if (reasonColumn) { params.push(text(body.reason, 'reason', 300)); sets.push(`${reasonColumn}=$${params.length}`); }
+      // A reason describes the current state only; the event log keeps the history.
+      if (task.status === 'blocked' && to !== 'blocked') sets.push('blocked_reason=NULL');
+      if (task.status === 'delayed' && to !== 'delayed') sets.push('delayed_reason=NULL');
       await client.query(`UPDATE app.farm_tasks SET ${sets.join(',')} WHERE id=$1`, params);
       await client.query(`INSERT INTO app.farm_task_events(task_id,actor_user_id,event_type,from_status,to_status,data) VALUES ($1,$2,'status_changed',$3,$4,$5)`, [id, user.id, task.status, to, body]);
       if (to === 'accepted') await client.query(`UPDATE app.farm_task_assignments SET status='accepted',responded_at=now() WHERE task_id=$1 AND user_id=$2`, [id, user.id]);
       if (to === 'completed') await client.query(`UPDATE app.farm_task_assignments SET status='completed',responded_at=now() WHERE task_id=$1 AND user_id=$2`, [id, user.id]);
       await client.query('COMMIT'); return { id, status: to };
+    } catch (e) { await client.query('ROLLBACK').catch(() => {}); throw e; } finally { client.release(); }
+  }
+
+  const CLOSED = ['completed', 'verified', 'cancelled', 'skipped'];
+
+  // Owners and managers hand a task to one member (the primary assignee). A new assignee has to
+  // accept again, so accepted or delayed work goes back to "assigned"; blocked work stays blocked.
+  async function assign(user, id, body = {}) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const task = (await client.query('SELECT * FROM app.farm_tasks WHERE id=$1 FOR UPDATE', [id])).rows[0];
+      if (!task) fail('NOT_FOUND', 'Task not found.');
+      await membership(user.id, task.farm_id, ['owner', 'manager']);
+      if (CLOSED.includes(task.status)) fail('INVALID_STATUS_TRANSITION', `A ${task.status} task cannot be reassigned.`);
+      const to = String(body.userId || '');
+      const member = (await client.query(`SELECT role FROM app.farm_members WHERE farm_id=$1 AND user_id::text=$2 AND status='active'`, [task.farm_id, to])).rows[0];
+      if (!member) throw validation('Choose a member of this farm.', 'userId');
+      if (member.role === 'viewer') throw validation('Viewers cannot be given tasks.', 'userId');
+      await client.query(`UPDATE app.farm_task_assignments SET status='removed' WHERE task_id=$1 AND assignment_role='primary' AND user_id<>$2 AND status<>'removed'`, [id, to]);
+      await client.query(`INSERT INTO app.farm_task_assignments(task_id,user_id,assignment_role,assigned_by) VALUES ($1,$2,'primary',$3)
+        ON CONFLICT(task_id,user_id) DO UPDATE SET assignment_role='primary',status='assigned',assigned_by=EXCLUDED.assigned_by,assigned_at=now(),responded_at=NULL`, [id, to, user.id]);
+      const status = task.status === 'blocked' ? 'blocked' : task.status === 'in_progress' ? 'in_progress' : 'assigned';
+      const clear = task.status === 'delayed' ? ',delayed_reason=NULL' : '';
+      await client.query(`UPDATE app.farm_tasks SET status=$2,version=version+1,updated_at=now()${clear} WHERE id=$1`, [id, status]);
+      await client.query(`INSERT INTO app.farm_task_events(task_id,actor_user_id,event_type,from_status,to_status,data) VALUES ($1,$2,'assigned',$3,$4,$5)`,
+        [id, user.id, task.status, status, { userId: to }]);
+      await client.query('COMMIT'); return { id, status };
+    } catch (e) { await client.query('ROLLBACK').catch(() => {}); throw e; } finally { client.release(); }
+  }
+
+  // Moves a task to another farm day, keeping its time of day. Delayed work is back on the plan.
+  async function reschedule(user, id, body = {}) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const task = (await client.query('SELECT *, local_date::text AS local_day FROM app.farm_tasks WHERE id=$1 FOR UPDATE', [id])).rows[0];
+      if (!task) fail('NOT_FOUND', 'Task not found.');
+      await membership(user.id, task.farm_id, ['owner', 'manager']);
+      if (CLOSED.includes(task.status)) fail('INVALID_STATUS_TRANSITION', `A ${task.status} task cannot be moved.`);
+      const day = dateOnly(body.localDate, 'localDate');
+      const shift = Math.round((Date.parse(`${day}T00:00:00Z`) - Date.parse(`${task.local_day}T00:00:00Z`)) / 86400000);
+      let status = task.status;
+      if (status === 'delayed') {
+        status = (await client.query(`SELECT 1 FROM app.farm_task_assignments WHERE task_id=$1 AND status<>'removed' LIMIT 1`, [id])).rows[0] ? 'assigned' : 'scheduled';
+      }
+      await client.query(`UPDATE app.farm_tasks SET local_date=$2::date, start_at=start_at + make_interval(days => $3::int),
+        due_at=due_at + make_interval(days => $3::int), status=$4, delayed_reason=CASE WHEN $4='delayed' THEN delayed_reason END,
+        version=version+1, updated_at=now() WHERE id=$1`, [id, day, shift, status]);
+      await client.query(`INSERT INTO app.farm_task_events(task_id,actor_user_id,event_type,from_status,to_status,data) VALUES ($1,$2,'rescheduled',$3,$4,$5)`,
+        [id, user.id, task.status, status, { from: task.local_day, to: day }]);
+      await client.query('COMMIT'); return { id, status, localDate: day };
     } catch (e) { await client.query('ROLLBACK').catch(() => {}); throw e; } finally { client.release(); }
   }
 
@@ -276,7 +374,7 @@ export function createFarmOpsService(pool, { farmPriceService = null, weatherGet
 
   async function fields(user, farmId) {
     await membership(user.id, farmId);
-    const r = await pool.query(`SELECT f.*, COALESCE(json_agg(json_build_object('id',c.id,'cropCode',c.crop_code,'stage',c.stage,'plantingDate',c.planting_date,'targetHarvestDate',c.target_harvest_date,'status',c.status)) FILTER (WHERE c.id IS NOT NULL),'[]') cycles
+    const r = await pool.query(`SELECT f.*, COALESCE(json_agg(json_build_object('id',c.id,'cropCode',c.crop_code,'variety',c.variety,'stage',c.stage,'plantingDate',c.planting_date,'targetHarvestDate',c.target_harvest_date,'status',c.status)) FILTER (WHERE c.id IS NOT NULL),'[]') cycles
       FROM app.farm_fields f LEFT JOIN app.crop_cycles c ON c.field_id=f.id AND c.status IN ('planned','active') WHERE f.farm_id=$1 GROUP BY f.id ORDER BY f.name`, [farmId]);
     return { items: r.rows };
   }
@@ -297,5 +395,5 @@ export function createFarmOpsService(pool, { farmPriceService = null, weatherGet
     const r = await pool.query(`SELECT r.*,f.name field_name,p.display_name actor_name,t.title task_title FROM app.farm_records r LEFT JOIN app.farm_fields f ON f.id=r.field_id LEFT JOIN app.user_profiles p ON p.user_id=r.actor_user_id LEFT JOIN app.farm_tasks t ON t.id=r.task_id WHERE ${where.join(' AND ')} ORDER BY r.occurred_at DESC LIMIT 100`, params);
     return { items: r.rows };
   }
-  return { farms, createFarm, membership, overview, prices, sprayAssessment, calendar, listTasks, getTask, createTask, transition, checklist, fields, members, records };
+  return { farms, createFarm, membership, overview, prices, sprayAssessment, calendar, listTasks, getTask, createTask, transition, assign, reschedule, checklist, fields, members, records };
 }

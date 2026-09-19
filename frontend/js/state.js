@@ -50,4 +50,5 @@ export const farmOps = {
   activeDate: new URLSearchParams(location.search).get('demoDate') || null,
   calendarView: 'agenda',
   focusedTaskId: null,
+  marketIndex: 0, // which of the farm's crops the dashboard market row shows
 };

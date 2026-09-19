@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import { el, isCompact } from '../dom.js';
 import { forumApi } from '../forum/forumApi.js';
 import { forum, requireAuth, resumeIntent, flash, currentFlash, expireSession } from '../forum/forumState.js';
@@ -26,7 +27,7 @@ function fetchPost(ctx) {
 
 const voteChip = (score, mine) => {
   const c = el(mine === 1 ? 'forum-vote up' : mine === -1 ? 'forum-vote down' : 'forum-vote', mine === 1 ? `▲ ${score}` : mine === -1 ? `▼ ${score}` : String(score), 'span');
-  if (mine) c.setAttribute('aria-label', mine === 1 ? 'you voted up' : 'you voted down');
+  if (mine) c.setAttribute('aria-label', mine === 1 ? t('you voted up') : t('you voted down'));
   return c;
 };
 
@@ -40,8 +41,8 @@ function softLabels(ctx) {
   const isReply = Boolean(cur?.dataset.replyId);
   const compact = isCompact();
   return {
-    l: isReply ? 'Vote' : 'Reply',
-    c: isReply ? (compact ? 'More' : 'Expand') : cur?.dataset.act === 'actions' ? 'Actions' : (compact ? '' : 'Select'),
+    l: t(isReply ? 'Vote' : 'Reply'),
+    c: t(isReply ? (compact ? 'More' : 'Expand') : cur?.dataset.act === 'actions' ? 'Actions' : (compact ? '' : 'Select')),
   };
 }
 
@@ -55,51 +56,51 @@ function build(ctx) {
   // walk through a long post on a 128x160 screen instead of clipping it.
   const piece = () => { const n = el('item forum-post'); n.dataset.act = 'post'; wrap.appendChild(n); return n; };
   const head = piece();
-  const meta = el('forum-meta', [TYPE_LABEL[p.type], p.community.name].join(' · '));
+  const meta = el('forum-meta', [TYPE_LABEL[p.type], t(p.community.name)].join(' · '));
   const compact = isCompact();
   for (const [on, text] of [[p.isSolved, '✓ SOLVED'], [p.isPinned, 'PINNED'], [p.isLocked, 'LOCKED'], [p.isHidden, 'HIDDEN'], [p.isDemo && !compact, 'DEMO']]) {
-    if (on) meta.appendChild(el(text === '✓ SOLVED' ? 'forum-state solved' : 'forum-state', text, 'span'));
+    if (on) meta.appendChild(el(text === '✓ SOLVED' ? 'forum-state solved' : 'forum-state', t(text), 'span'));
   }
   head.appendChild(meta);
   const shownPost=!view.showOriginal&&p.translation?p.translation:p;
   head.appendChild(el('forum-title forum-title--full', shownPost.title));
-  if(p.translation&&!view.showOriginal)head.appendChild(el('forum-meta',`🌐 Translated from ${p.language}`));
+  if(p.translation&&!view.showOriginal)head.appendChild(el('forum-meta',t('🌐 Translated from {lang}', { lang: p.language })));
   for (const text of chunkText(shownPost.body, compact ? 90 : 260)) piece().appendChild(el('forum-body', text));
 
   const foot = piece();
   if (p.tags.length) {
     const tags = el('forum-tags');
-    p.tags.forEach((t) => tags.appendChild(el('forum-tag', `#${tagLabel(t)}`, 'span')));
+    p.tags.forEach((tag) => tags.appendChild(el('forum-tag', `#${tagLabel(tag)}`, 'span')));
     foot.appendChild(tags);
   }
   foot.appendChild(el('forum-meta', `${p.author.isVerifiedExpert?'✓ ':''}${p.author.displayName}${p.author.expertTitle?' · '+p.author.expertTitle:''} · ${p.locationLabel} · ${relTime(p.createdAt)}`));
-  if (p.type === 'local_report') foot.appendChild(el('forum-meta forum-usernote', 'USER REPORT · not official'));
-  if (!compact && (p.community.slug === 'livestock' || p.tags.some((t) => ['pest', 'disease', 'fertilizer'].includes(t)))) {
-    foot.appendChild(el('forum-meta forum-usernote', 'Community advice is not verified. Ask a local expert before using chemicals or treating animals.'));
+  if (p.type === 'local_report') foot.appendChild(el('forum-meta forum-usernote', t('USER REPORT · not official')));
+  if (!compact && (p.community.slug === 'livestock' || p.tags.some((tag) => ['pest', 'disease', 'fertilizer'].includes(tag)))) {
+    foot.appendChild(el('forum-meta forum-usernote', t('Community advice is not verified. Ask a local expert before using chemicals or treating animals.')));
   }
   const votes = el('forum-votes');
   votes.append(voteChip(p.score, viewer.vote), el('forum-meta', replyCount(p.replyCount), 'span'));
   foot.appendChild(votes);
 
-  const actions = el('item forum-actions', isCompact() ? '1▲ 0▼ 2Rep 3Sav #' : '1 Up · 0 Down · 2 Reply · 3 ' + (viewer.saved ? 'Unsave' : 'Save') + ' · # More');
+  const actions = el('item forum-actions', isCompact() ? t('1▲ 0▼ 2Rep 3Sav #') : t('1 Up · 0 Down · 2 Reply · 3 {action} · # More', { action: t(viewer.saved ? 'Unsave' : 'Save') }));
   actions.dataset.act = 'actions';
   wrap.appendChild(actions);
 
   if (!replies.length) {
-    wrap.appendChild(emptyView('No replies yet.', viewer.canReply ? 'Press 2 to be the first to reply.' : (p.isLocked ? 'This post is locked.' : 'Sign in to reply.')));
+    wrap.appendChild(emptyView(t('No replies yet.'), t(viewer.canReply ? 'Press 2 to be the first to reply.' : (p.isLocked ? 'This post is locked.' : 'Sign in to reply.'))));
   }
   for (const r of replies) {
     const row = el(`item forum-reply${r.isAccepted ? ' forum-reply--accepted' : ''}${r.depth ? ' forum-reply--nested' : ''}`);
     row.dataset.replyId = r.id;
-    if (r.isAccepted) row.appendChild(el('forum-solution', '✓ SOLUTION'));
+    if (r.isAccepted) row.appendChild(el('forum-solution', t('✓ SOLUTION')));
     const meta = el('forum-meta');
-    const sourceLabel=r.source==='ai'?'🤖 AI · ':r.source==='official'?'📌 Official · ':r.author.isVerifiedExpert?'✓ ':'';
-    meta.appendChild(document.createTextNode(`${sourceLabel}${r.author.displayName}${r.author.expertTitle?' · '+r.author.expertTitle:''} · ${relTime(r.createdAt)}${r.isEdited ? ' · edited' : ''} `));
+    const sourceLabel=r.source==='ai'?t('🤖 AI · '):r.source==='official'?t('📌 Official · '):r.author.isVerifiedExpert?'✓ ':'';
+    meta.appendChild(document.createTextNode(`${sourceLabel}${r.author.displayName}${r.author.expertTitle?' · '+r.author.expertTitle:''} · ${relTime(r.createdAt)}${r.isEdited ? ' · ' + t('edited') : ''} `));
     meta.appendChild(voteChip(r.score, r.viewerVote));
     row.appendChild(meta);
     const shownReply=!view.showOriginal&&r.translation?r.translation.body:r.body;
     row.appendChild(el(view.expanded.has(r.id) ? 'forum-body expanded' : 'forum-body', shownReply));
-    if(r.source==='ai')row.appendChild(el('forum-meta forum-usernote','AI suggestion · Consult a local expert.'));
+    if(r.source==='ai')row.appendChild(el('forum-meta forum-usernote',t('AI suggestion · Consult a local expert.')));
     wrap.appendChild(row);
   }
   return wrap;
@@ -116,8 +117,8 @@ function authFail(ctx, err) {
 async function vote(ctx, value, replyId) {
   const v = view, d = v.data;
   if (!requireAuth(ctx)) return;
-  if (!replyId && d.viewer.isAuthor) { flash('You cannot vote on your own post.'); return ctx.rerender(); }
-  if (d.post.isLocked) { flash('This post is locked.'); return ctx.rerender(); }
+  if (!replyId && d.viewer.isAuthor) { flash(t('You cannot vote on your own post.')); return ctx.rerender(); }
+  if (d.post.isLocked) { flash(t('This post is locked.')); return ctx.rerender(); }
   const target = replyId ? d.replies.find((r) => r.id === replyId) : null;
   const read = () => (target ? { vote: target.viewerVote, score: target.score } : { vote: d.viewer.vote, score: d.post.score });
   const write = ({ vote: mine, score }) => { if (target) { target.viewerVote = mine; target.score = score; } else { d.viewer.vote = mine; d.post.score = score; } };
@@ -146,7 +147,7 @@ async function toggleSave(ctx) {
   done(ctx, root);
   try {
     await (was ? forumApi.unsave(d.post.id) : forumApi.save(d.post.id));
-    flash(was ? 'Removed from saved.' : 'Saved.');
+    flash(t(was ? 'Removed from saved.' : 'Saved.'));
   } catch (err) {
     d.viewer.saved = was;
     if (!authFail(ctx, err)) flash(errorText(err));
@@ -155,7 +156,7 @@ async function toggleSave(ctx) {
 }
 
 function reply(ctx) {
-  if (view.data.post.isLocked) { flash('This post is locked.'); return ctx.rerender(); }
+  if (view.data.post.isLocked) { flash(t('This post is locked.')); return ctx.rerender(); }
   if (requireAuth(ctx)) ctx.router.push('CreateReply', { postId: view.id });
 }
 
@@ -167,7 +168,7 @@ function report(ctx, target) {
     options: reasons.map((r) => ({ label: REASON_LABEL[r], value: r })),
     onPick(o, pctx) {
       forumApi.report(target.type, target.id, o.value)
-        .then(() => flash('Report sent. Thank you.'))
+        .then(() => flash(t('Report sent. Thank you.')))
         .catch((err) => flash(errorText(err)))
         .finally(() => pctx.router.pop());
     },
@@ -184,20 +185,20 @@ async function mutate(ctx, call, okText) {
 function openActions(ctx) {
   const { post: p, viewer } = view.data;
   const r = focusedReply(ctx);
-  const targetName = r ? 'reply' : 'post';
+  const isReply = Boolean(r);
   const list = [];
   const add = (label, run) => list.push({ label, value: label, run });
-  add(`Upvote ${targetName}`, (c) => vote(c, 1, r?.id));
-  add(`Downvote ${targetName}`, (c) => vote(c, -1, r?.id));
-  add('Reply', (c) => reply(c));
-  add(viewer.saved ? 'Unsave' : 'Save', (c) => toggleSave(c));
-  add(`Report ${targetName}`, (c) => report(c, { type: r ? 'reply' : 'post', id: r ? r.id : p.id }));
-  if (viewer.canMarkSolved && r && !r.isAccepted) add('Mark as solution', (c) => mutate(c, () => forumApi.setSolution(p.id, r.id), 'Marked as solution.'));
-  if (viewer.canMarkSolved && p.isSolved) add('Remove solution', (c) => mutate(c, () => forumApi.clearSolution(p.id), 'Solution removed.'));
+  add(t(isReply ? 'Upvote reply' : 'Upvote post'), (c) => vote(c, 1, r?.id));
+  add(t(isReply ? 'Downvote reply' : 'Downvote post'), (c) => vote(c, -1, r?.id));
+  add(t('Reply'), (c) => reply(c));
+  add(t(viewer.saved ? 'Unsave' : 'Save'), (c) => toggleSave(c));
+  add(t(isReply ? 'Report reply' : 'Report post'), (c) => report(c, { type: r ? 'reply' : 'post', id: r ? r.id : p.id }));
+  if (viewer.canMarkSolved && r && !r.isAccepted) add(t('Mark as solution'), (c) => mutate(c, () => forumApi.setSolution(p.id, r.id), t('Marked as solution.')));
+  if (viewer.canMarkSolved && p.isSolved) add(t('Remove solution'), (c) => mutate(c, () => forumApi.clearSolution(p.id), t('Solution removed.')));
   if (viewer.canModerate) {
-    add(p.isPinned ? 'Unpin post' : 'Pin post', (c) => mutate(c, () => forumApi.moderate(p.id, { isPinned: !p.isPinned })));
-    add(p.isLocked ? 'Unlock post' : 'Lock post', (c) => mutate(c, () => forumApi.moderate(p.id, { isLocked: !p.isLocked })));
-    add('Hide post', async (c) => { await mutate(c, () => forumApi.moderate(p.id, { isHidden: true }), 'Post hidden.'); c.router.pop(); });
+    add(t(p.isPinned ? 'Unpin post' : 'Pin post'), (c) => mutate(c, () => forumApi.moderate(p.id, { isPinned: !p.isPinned })));
+    add(t(p.isLocked ? 'Unlock post' : 'Lock post'), (c) => mutate(c, () => forumApi.moderate(p.id, { isLocked: !p.isLocked })));
+    add(t('Hide post'), async (c) => { await mutate(c, () => forumApi.moderate(p.id, { isHidden: true }), t('Post hidden.')); c.router.pop(); });
   }
   view.focusIndex = ctx.focus.index;
   ctx.router.push('ForumPicker', {

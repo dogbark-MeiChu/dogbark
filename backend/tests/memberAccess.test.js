@@ -36,7 +36,8 @@ test('Ask AI and TTS refuse anonymous callers', async () => {
 
 test('TTS serves a repeated screen from its cache without synthesizing again', async () => {
   let calls = 0;
-  const synthesize = async () => { calls += 1; return { text: 'translated text', mimeType: 'text/plain' }; };
+  const audio = Buffer.from('ID3 fake mp3 bytes');
+  const synthesize = async () => { calls += 1; return { audio, mimeType: 'audio/mp3' }; };
   const app = express();
   app.use(express.json());
   app.use('/api/tts', ttsRouter({ auth, synthesize }));
@@ -50,8 +51,30 @@ test('TTS serves a repeated screen from its cache without synthesizing again', a
     for (const member of ['member-1', 'member-2']) {
       const res = await post(member, text);
       assert.equal(res.status, 200);
-      assert.deepEqual(await res.json(), { ok: true, text: 'translated text' });
+      assert.match(res.headers.get('content-type'), /^audio\/mp3/);
+      assert.deepEqual(Buffer.from(await res.arrayBuffer()), audio);
     }
     assert.equal(calls, 1);
+  } finally { server.closeAllConnections(); server.close(); }
+});
+
+test('when both cloud voices fail, TTS hands the translated text back for the handset to read', async () => {
+  const { TtsError } = await import('../services/ttsService.js');
+  const synthesize = async () => { throw new TtsError('TTS_FALLBACK_NATIVE', 'Cloud TTS failed, use native.', { retryable: true, fallbackText: 'बाज़ार भाव' }); };
+  const app = express();
+  app.use(express.json());
+  app.use('/api/tts', ttsRouter({ auth, synthesize }));
+  const server = await new Promise((r) => { const s = app.listen(0, '127.0.0.1', () => r(s)); });
+  try {
+    const res = await realFetch(`http://127.0.0.1:${server.address().port}/api/tts`, {
+      method: 'POST', headers: { 'content-type': 'application/json', cookie: 'agrilink_session=member-1' },
+      body: JSON.stringify({ text: `Market prices ${Date.now()}`, language: 'hi' }),
+    });
+    const body = await res.json();
+    assert.equal(res.status, 503);
+    assert.equal(body.ok, false);
+    assert.equal(body.error.code, 'TTS_FALLBACK_NATIVE');
+    assert.equal(body.error.fallbackText, 'बाज़ार भाव');
+    assert.ok('requestId' in body.error);
   } finally { server.closeAllConnections(); server.close(); }
 });

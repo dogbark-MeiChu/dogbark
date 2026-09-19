@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import { el, isCompact } from '../dom.js';
 import { ASK_AI_PRESETS, composer, ask, loadCapabilities, serverCapabilities, track } from '../askAI.js';
 import { capabilities, loadFeatures } from '../media.js';
@@ -20,24 +21,24 @@ export default {
 
     const hero = el('ai-hero');
     const mark = el('ai-mark');
-    mark.append(el('ai-orb'), el('ai-mark-text', 'AI FIELD'));
+    mark.append(el('ai-orb'), el('ai-mark-text', t('AI FIELD')));
     hero.append(mark);
     if (compact) {
-      hero.append(el('ai-tagline', 'Ask/Snap/Talk'));
+      hero.append(el('ai-tagline', t('Ask/Snap/Talk')));
     } else {
-      hero.append(el('ai-tagline', 'Ask. Snap. Speak.'), el('ai-subline', 'Get a clear next step'));
+      hero.append(el('ai-tagline', t('Ask. Snap. Speak.')), el('ai-subline', t('Get a clear next step')));
     }
     wrap.appendChild(hero);
 
     const box = el('item ai-composer');
-    box.append(el('ai-composer-label', compact ? 'Ask a farm question' : 'Ask about your farm'));
+    box.append(el('ai-composer-label', t(compact ? 'Ask a farm question' : 'Ask about your farm')));
     if (!compact) {
       const media = capabilities();
       const modes = el('ai-modes');
       modes.append(
-        el('ai-mode-badge', 'Type'),
-        el(`ai-mode-badge${media.photo ? '' : ' off'}`, 'Photo'),
-        el(`ai-mode-badge${media.voice ? '' : ' off'}`, 'Mic'),
+        el('ai-mode-badge', t('Type')),
+        el(`ai-mode-badge${media.photo ? '' : ' off'}`, t('Photo')),
+        el(`ai-mode-badge${media.voice ? '' : ' off'}`, t('Mic')),
       );
       box.appendChild(modes);
     }
@@ -46,7 +47,7 @@ export default {
     const list = el('ai-presets');
     presetsFor().forEach((p, i) => {
       const row = el('item ai-preset');
-      row.append(el('ai-preset-num', String(i + 1)), el('ai-preset-label', p.label));
+      row.append(el('ai-preset-num', String(i + 1)), el('ai-preset-label', t(p.label)));
       list.appendChild(row);
     });
     wrap.appendChild(list);

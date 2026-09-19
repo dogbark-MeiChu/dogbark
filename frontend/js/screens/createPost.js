@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import { el, isCompact } from '../dom.js';
 import { forumApi } from '../forum/forumApi.js';
 import { auth, forum, loadDraft, newDraft, saveDraft, clearDraft, flash, expireSession, setWizardStarter } from '../forum/forumState.js';
@@ -37,7 +38,7 @@ function textStep({ name, title, label, max, min, multiline, field, next, cap })
   let entry = null;
   const go = (ctx, value) => {
     const d = draft();
-    if (value.length < min) return entry.hint(`Needs at least ${min} characters`);
+    if (value.length < min) return entry.hint(t('Needs at least {n} characters', { n: min }));
     d[field] = value; saveDraft();
     ctx.router.push(next);
   };
@@ -47,11 +48,11 @@ function textStep({ name, title, label, max, min, multiline, field, next, cap })
     softCenter: { label: 'Next', handler: () => entry?.done() },
     render(ctx) {
       entry = createTextEntry({
-        max, min, multiline, cap, initial: draft()[field] || '', placeholder: 'Type here…',
+        max, min, multiline, cap, initial: draft()[field] || '', placeholder: t('Type here…'),
         onDone: (v) => go(ctx, autoCap(v, cap)),
       });
       const wrap = el('forum-screen forum-form-step');
-      wrap.appendChild(el('forum-label', label));
+      wrap.appendChild(el('forum-label', t(label)));
       wrap.appendChild(entry.render());
       return wrap;
     },
@@ -71,7 +72,7 @@ export const CreatePostTagsLoader = {
   softLeft: { label: '', handler() {} },
   render(ctx) {
     const wrap = el('forum-screen');
-    wrap.appendChild(loadingView('Loading tags…'));
+    wrap.appendChild(loadingView(t('Loading tags…')));
     const root = ctx.root;
     const d = draft();
     forumApi.tags(d.community).then((r) => {
@@ -79,7 +80,7 @@ export const CreatePostTagsLoader = {
       ctx.router.replace('CreatePostTags', {
         title: 'New post 5/7', note: 'Pick up to 2 tags (optional). # = done', multi: true, max: 2,
         selectedValues: d.tags,
-        options: r.items.map((t) => ({ label: tagLabel(t.slug), value: t.slug })),
+        options: r.items.map((tag) => ({ label: tagLabel(tag.slug), value: tag.slug })),
         onDone(values, c) { d.tags = values; saveDraft(); c.router.push('CreatePostLocation', locationParams()); },
       });
     }).catch((err) => { if (ctx.root === root) { wrap.replaceChildren(el('forum-error-text', errorText(err)), retryRow()); } });
@@ -87,14 +88,14 @@ export const CreatePostTagsLoader = {
   },
   onEnter(row, ctx) { if (row?.dataset.act === 'retry') ctx.rerender(); },
 };
-const retryRow = () => { const r = el('item forum-retry', '↻ Retry'); r.dataset.act = 'retry'; return r; };
+const retryRow = () => { const r = el('item forum-retry', t('↻ Retry')); r.dataset.act = 'retry'; return r; };
 
 function locationParams() {
   const d = draft();
-  const region = auth.user?.regionName || 'my region';
+  const region = auth.user?.regionName || t('my region');
   return {
     title: 'New post 6/7', note: 'Where should this show? No exact address is shared.', selected: d.locationScope,
-    options: [{ label: `Near me: ${region}`, value: 'region' }, { label: 'My whole country', value: 'country' }],
+    options: [{ label: t('Near me: {region}', { region }), value: 'region' }, { label: 'My whole country', value: 'country' }],
     onPick(o, ctx) { d.locationScope = o.value; saveDraft(); ctx.router.push('CreatePostPreview'); },
   };
 }
@@ -106,22 +107,22 @@ export const CreatePostPreview = {
   name: 'CreatePostPreview',
   title: 'Preview 7/7',
   softLeft: { label: '', handler() {} },
-  softCenter: { label: (ctx) => (sub?.busy ? '…' : 'Post'), handler: (ctx) => submit(ctx) },
+  softCenter: { label: (ctx) => (sub?.busy ? '…' : t('Post')), handler: (ctx) => submit(ctx) },
   render(ctx) {
     sub ??= { busy: false, error: null };
     const d = draft();
     const wrap = el('forum-screen forum-preview');
-    if (sub.busy) { wrap.appendChild(loadingView('Posting…')); return wrap; }
+    if (sub.busy) { wrap.appendChild(loadingView(t('Posting…'))); return wrap; }
     const box = el('item forum-post');
     box.appendChild(el('forum-meta', `${TYPE_LABEL[d.type]} · ${communityName(d.community)}`));
     box.appendChild(el('forum-title forum-title--full', d.title));
     box.appendChild(el('forum-body', d.body));
-    if (d.tags.length) { const t = el('forum-tags'); d.tags.forEach((x) => t.appendChild(el('forum-tag', `#${tagLabel(x)}`, 'span'))); box.appendChild(t); }
-    box.appendChild(el('forum-meta', d.locationScope === 'country' ? 'Shown for: my country' : 'Shown for: near me'));
-    box.appendChild(el('forum-meta', 'Photo: none'));
+    if (d.tags.length) { const tagBox = el('forum-tags'); d.tags.forEach((x) => tagBox.appendChild(el('forum-tag', `#${tagLabel(x)}`, 'span'))); box.appendChild(tagBox); }
+    box.appendChild(el('forum-meta', t(d.locationScope === 'country' ? 'Shown for: my country' : 'Shown for: near me')));
+    box.appendChild(el('forum-meta', t('Photo: none')));
     wrap.appendChild(box);
     if (sub.error) wrap.appendChild(el('forum-error-text', sub.error));
-    wrap.appendChild(el('forum-hint', isCompact() ? 'Enter = post' : 'Press Post to publish. Back to edit.'));
+    wrap.appendChild(el('forum-hint', t(isCompact() ? 'Enter = post' : 'Press Post to publish. Back to edit.')));
     return wrap;
   },
   initialFocus: () => 0,
@@ -139,13 +140,13 @@ async function submit(ctx) {
     clearDraft();
     sub = null;
     forum.cachedFeeds.clear();
-    flash('Posted.');
+    flash(t('Posted.'));
     const w = forum.wizard;
     forum.pendingIntent = { kind: 'openPost', postId: r.post.id, origin: w.origin, depth: w.depth, ready: true };
     ctx.router.popTo(w.depth);
   } catch (err) {
     sub.busy = false;
-    if (err.code === 'AUTH_REQUIRED') { expireSession(); sub.error = 'Please sign in again.'; }
+    if (err.code === 'AUTH_REQUIRED') { expireSession(); sub.error = t('Please sign in again.'); }
     else sub.error = errorText(err);
     ctx.rerender();
   }

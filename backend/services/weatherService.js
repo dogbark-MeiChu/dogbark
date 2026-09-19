@@ -6,7 +6,7 @@ const cache = new Map(); // key -> { at, data }
 
 const FIELDS = {
   current: 'temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,wind_gusts_10m',
-  hourly: 'precipitation_probability,temperature_2m,relative_humidity_2m,wind_speed_10m,wind_gusts_10m',
+  hourly: 'precipitation_probability,precipitation,temperature_2m,relative_humidity_2m,wind_speed_10m,wind_gusts_10m',
   daily: [
     'weather_code',
     'temperature_2m_max',
@@ -14,6 +14,7 @@ const FIELDS = {
     'precipitation_probability_max',
     'precipitation_sum',
     'et0_fao_evapotranspiration',
+    'wind_speed_10m_max',
   ].join(','),
 };
 
@@ -24,7 +25,7 @@ export function buildUrl(lat, lng) {
     current: FIELDS.current,
     hourly: FIELDS.hourly,
     daily: FIELDS.daily,
-    forecast_days: '3',
+    forecast_days: '7', // Today's Farm plans a week ahead; the Weather screen shows the first three
     timezone: 'auto',
   });
   return `https://api.open-meteo.com/v1/forecast?${p}`;
@@ -36,8 +37,10 @@ export function normalize(raw) {
   const currentHour = String(raw.current.time || '').slice(0, 13);
   const start = Math.max(0, (hour.time || []).findIndex((x) => String(x).startsWith(currentHour)));
   const next4Rain = (hour.precipitation_probability || []).slice(start, start + 4);
+  const at = (key, i) => hour[key]?.[i] ?? null;
   return {
     current: {
+      time: raw.current.time ?? null, // local time at the location (timezone=auto)
       temp: Math.round(raw.current.temperature_2m),
       temperatureC: raw.current.temperature_2m,
       relativeHumidity: raw.current.relative_humidity_2m,
@@ -56,6 +59,13 @@ export function normalize(raw) {
       rain_prob: d.precipitation_probability_max[i],
       rain_mm: d.precipitation_sum[i],
       et0: d.et0_fao_evapotranspiration[i],
+      wind_max: d.wind_speed_10m_max?.[i] ?? null,
+    })),
+    // Local hours, for spray windows on any forecast day (services/sprayAssessment.js).
+    hourly: (hour.time || []).map((time, i) => ({
+      time, temperatureC: at('temperature_2m', i), relativeHumidity: at('relative_humidity_2m', i),
+      windSpeedKph: at('wind_speed_10m', i), windGustKph: at('wind_gusts_10m', i),
+      rainProbability: at('precipitation_probability', i), precipitationMm: at('precipitation', i),
     })),
     attribution: 'Weather data by Open-Meteo.com',
   };

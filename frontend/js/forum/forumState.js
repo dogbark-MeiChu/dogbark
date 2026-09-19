@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import { forumApi } from './forumApi.js';
 import { identity } from '../state.js';
 import { newRequestId } from './forumUtils.js';
@@ -56,7 +57,7 @@ export function expireSession() {
   identity.profile = null;
   forum.cachedFeeds.clear();
   forum.notifications = 0;
-  flash('Session ended. Please sign in again.');
+  flash(t('Session ended. Please sign in again.'));
 }
 
 export async function refreshNotifications() {

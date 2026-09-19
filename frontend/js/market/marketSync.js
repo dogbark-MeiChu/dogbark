@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import { identity } from '../state.js';
 import { marketApi } from './marketApi.js';
 
@@ -21,8 +22,8 @@ const HIDE_MS = 5000;
 
 export const describe = (events) => {
   const last = events[events.length - 1];
-  const text = TEXT[last.kind] || 'Market update';
-  return events.length > 1 ? `${text} (+${events.length - 1} more)` : text;
+  const text = t(TEXT[last.kind] || 'Market update');
+  return events.length > 1 ? t('{text} (+{n} more)', { text, n: events.length - 1 }) : text;
 };
 
 export function startMarketSync({ router, toast = document.getElementById('toast') }) {

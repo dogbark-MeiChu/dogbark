@@ -453,3 +453,22 @@
   - 主機上有一筆非示範的貨源（Test_Admin，洋蔥 100 kg，₹20）——不是這次建立的，seed / reset 都不會動它。
   - 示範帳號手機 `9100000001`–`9100000005`，PIN 由主機的 `DEMO_USER_PIN` 決定。
   - 想重來一次兩機示範：以 postgres 執行 reset 再 seed。
+
+## 202609192007 · 介面多語系（en / hi / bn / vi）
+
+- **想解決的問題**：Settings → Language 選了語言沒有效果，畫面還是英文。原本語言只存進 `user_profiles.language`，只影響按 # 朗讀（後端翻譯）和 Ask AI 的回答語言；所有畫面文字都是寫死的英文，前端沒有 i18n。
+- **做了什麼改動**
+  - 新增 `frontend/js/i18n/`：`index.js`（`t()`、`setLanguage()`、`LANGUAGES`、`dateLocale`）和 `hi.js` / `bn.js` / `vi.js` 三份翻譯表（約 800 條）。**以英文原文當 key**：`t('Settings')`；沒有翻譯就顯示英文，不會出現空白；變數用 `{n}`：`t('{n} days left', { n })`。
+  - 語言在「一次頁面載入內」固定：啟動時從 `localStorage['agrilink.lang']` 同步讀取，所以模組頂層的 `t()`（例如選單、標籤表）也能運作。換語言＝存起來 + `location.reload()`。登入 / 讀到 session 時如果 profile 語言和目前不同，也會存起來重新載入（`main.js`、`identity.js`）。
+  - `router.js` 會自動翻譯畫面標題和三個 softkey 的文字，所以畫面裡只寫英文 key 即可；其他畫面（identity、weather、prices、Ask AI、Farmer Circle、Market、Today's Farm、TTS 提示、api 錯誤訊息）都把文字包了 `t()`。
+  - 登入前的 Welcome 畫面新增第 3 項 Language（`WelcomeLanguage`）：還沒有 profile，所以只存在這個瀏覽器；註冊時 `draft.language` 預設為目前語言。
+  - 日期改用該語言的 locale（一律 Latin 數字，價格與數量不會變成別種數字）；孟加拉語翻譯表裡的數字也統一用 Latin 數字。
+  - 伺服器回傳的固定英文句子（天氣建議、價格趨勢、噴藥條件、錯誤訊息）在前端用同一份表翻譯。
+  - 新增 `backend/test/i18n.test.js`：三種語言 key 必須相同、不可空白、`{placeholder}` 要一致；全套測試 163 項通過。
+- **驗證結果**：用 `npm run forum:dev`（3101）登入示範帳號，在 240×320 實測 hi、bn、vi：Settings → Language 選語言 → 儲存 → 重新載入 → 主選單、Farmer Circle（含篩選選單）、Market 各畫面、Ask AI（含離線答案）都已換成該語言。**沒有實測**：Today's Farm、Weather、Market Prices 有資料時的畫面、議價 / 交易畫面（dev server 沒有這些資料），只做了程式檢查與語法載入。
+- **給組員的注意事項**
+  - **新增畫面文字一律用 `t('English text')`**，並且同時在 `hi.js`、`bn.js`、`vi.js` 補上翻譯（測試會檢查三份 key 一致）。`t()` 用在物件屬性（例如 `label:`、`title:`）時，router 會自動再翻譯一次，所以不用重複包；但陣列 / 對照表裡的文字要自己包。
+  - 不要在有 `t` 這個 import 的檔案裡把區域變數也叫 `t`（會蓋掉翻譯函式）；`api.js` 與 `farmOps.js` 因為既有的 `t` 變數，改用 `import { t as tr }`。
+  - **還沒翻譯 / 沒辦法翻譯的**：使用者輸入的內容（貼文、回覆）、伺服器資料（地區名、市場名、專家頭銜、作物名只翻譯了常見幾種）、T9 輸入法只能輸入英文字母（hi/bn/vi 無法用九宮格打字）、Ask AI 的 `language` 後端 schema 目前只接受 `en` / `hi`（bn、vi 會用英文回答，`aiSchemas.js` 的 enum 要擴充）、# 朗讀會把已翻譯的畫面文字再送去翻譯（不影響結果，但多一次呼叫）。
+  - 三種語言的字型用 `system-ui`；Cloud Phone 真機是否有天城文 / 孟加拉文字型還沒驗證。
+  - 翻譯是我（Claude）直接寫的，請讓母語者看過再上線，特別是農業用語和 Market 交易畫面。

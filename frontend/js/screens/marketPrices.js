@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import { getJSON } from '../api.js';
 import { user, identity } from '../state.js';
 import { money, h } from '../fmt.js';
@@ -13,9 +14,9 @@ const point = () => {
   return p?.regionLat != null && p?.regionLng != null ? `&lat=${p.regionLat}&lng=${p.regionLng}` : '';
 };
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m) => t(m));
 function dataDate(value) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return value || 'Unknown date';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return value || t('Unknown date');
   const [year, month, day] = value.split('-');
   return `${day} ${MONTHS[Number(month) - 1]} ${year}`;
 }
@@ -26,7 +27,7 @@ function shortDate(value) {
 }
 
 function sourceLabel(source) {
-  return source === 'agmarknet' ? 'Agmarknet (Govt of India)' : source || 'Database';
+  return source === 'agmarknet' ? t('Agmarknet (Govt of India)') : source || t('Database');
 }
 
 // Own crops first (in the member's order), then the rest alphabetically.
@@ -43,13 +44,19 @@ async function load(ctx) {
       crops = orderCrops((await getJSON(`/api/prices/crops?region=${region()}`)).items);
       cropsFor = region(); ci = 0;
     }
-    if (!crops.length) { data = null; error = 'No mandi prices for your area yet.'; }
+    if (!crops.length) { data = null; error = t('No mandi prices for your area yet.'); }
     else data = await getJSON(`/api/prices?crop=${crops[ci].code}&region=${region()}${point()}`);
   } catch {
-    data = null; error = 'Prices unavailable';
+    data = null; error = t('Prices unavailable');
   }
   loading = false;
   ctx.rerender();
+}
+
+// The server sends this sentence in English with the percentage baked in.
+function trendReason(reason) {
+  const m = /^7-day price change: ([+-]?[\d.]+)%\./.exec(reason || '');
+  return m ? t('7-day price change: {pct}%. This is market data, not advice.', { pct: `${Number(m[1]) >= 0 && !m[1].startsWith('+') ? '+' : ''}${m[1]}` }) : t(reason);
 }
 
 function switchCrop(ctx, delta) {
@@ -73,10 +80,10 @@ export default {
     const wrap = h('list');
     const crop = h('item');
     const many = crops?.length > 1;
-    crop.append(h('', crops?.length ? `${many ? '◄ ' : ''}${crops[ci].name}${many ? ' ►' : ''}` : 'Crop'));
+    crop.append(h('', crops?.length ? `${many ? '◄ ' : ''}${t(crops[ci].name)}${many ? ' ►' : ''}` : t('Crop')));
     wrap.appendChild(crop);
 
-    if (!data) { wrap.appendChild(h('msg', error || 'Loading…')); return wrap; }
+    if (!data) { wrap.appendChild(h('msg', error || t('Loading…'))); return wrap; }
 
     data.markets.forEach((m, i) => {
       const row = h('item');
@@ -86,14 +93,14 @@ export default {
       const away = i > 0 && m.distance_km != null ? ` · ${m.distance_km}km` : '';
       // Home is "your area" only when it is near; otherwise it is the nearest mandi with a price today.
       const far = data.home_from_you_km > 25;
-      const label = i > 0 ? `${m.name}${away}` : far ? `Nearest · ${m.name} · ${data.home_from_you_km}km` : `Your area · ${m.name}`;
-      row.append(h('', label), h('dim', `${money(m.price, data.currency)}/qt ${arrow}${when}`));
+      const label = i > 0 ? `${m.name}${away}` : far ? `${t('Nearest')} · ${m.name} · ${data.home_from_you_km}km` : `${t('Your area')} · ${m.name}`;
+      row.append(h('', label), h('dim', `${money(m.price, data.currency)}/${t('qt')} ${arrow}${when}`));
       wrap.appendChild(row);
     });
     const variety = data.variety && !['Common', 'Other', 'FAQ'].includes(data.variety) ? ` · ${data.variety}` : '';
-    wrap.appendChild(h('msg dim', `Data: ${dataDate(data.date)} · ${sourceLabel(data.source)}${variety}`));
-    wrap.appendChild(h('msg', `Trend: ${data.analysis.reason}`));
-    if (data.sample) wrap.appendChild(h('msg dim hide-small', 'Sample data'));
+    wrap.appendChild(h('msg dim', `${t('Data:')} ${dataDate(data.date)} · ${sourceLabel(data.source)}${variety}`));
+    wrap.appendChild(h('msg', `${t('Trend:')} ${trendReason(data.analysis.reason)}`));
+    if (data.sample) wrap.appendChild(h('msg dim hide-small', t('Sample data')));
     return wrap;
   },
   onKey(action, ctx) {

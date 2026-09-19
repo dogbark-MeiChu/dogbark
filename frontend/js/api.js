@@ -1,3 +1,4 @@
+import { t as tr } from './i18n/index.js';
 export async function getJSON(path, { timeout = 6000 } = {}) {
   const res = await fetch(path, { signal: AbortSignal.timeout(timeout) });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -16,7 +17,7 @@ export class ApiError extends Error {
   }
 }
 
-const OFFLINE = () => new ApiError('OFFLINE', 'No network. Check your signal.', { retryable: true });
+const OFFLINE = () => new ApiError('OFFLINE', tr('No network. Check your signal.'), { retryable: true });
 
 // Combines the caller's cancel signal with a hard timeout, so Back/Cancel and a
 // slow network both abort the same fetch.
@@ -32,15 +33,15 @@ async function post(path, init, { timeout, signal }) {
   try {
     res = await fetch(path, { method: 'POST', ...init, signal: signalFor(signal, timeout) });
   } catch (err) {
-    if (signal?.aborted) throw new ApiError('CANCELLED', 'Cancelled.');
+    if (signal?.aborted) throw new ApiError('CANCELLED', tr('Cancelled.'));
     throw err.name === 'TimeoutError'
-      ? new ApiError('AI_TIMEOUT', 'AI is taking longer than usual.', { retryable: true })
+      ? new ApiError('AI_TIMEOUT', tr('AI is taking longer than usual.'), { retryable: true })
       : OFFLINE();
   }
   const body = await res.json().catch(() => null);
   if (!res.ok || body?.ok === false) {
     const e = body?.error || {};
-    throw new ApiError(e.code || `HTTP_${res.status}`, e.message || 'Something went wrong.', { retryable: Boolean(e.retryable) });
+    throw new ApiError(e.code || `HTTP_${res.status}`, tr(e.message || 'Something went wrong.'), { retryable: Boolean(e.retryable) });
   }
   return body;
 }
@@ -66,15 +67,15 @@ export async function request(method, path, { body, timeout = 8000, signal } = {
   try {
     res = await fetch(path, init);
   } catch (err) {
-    if (signal?.aborted) throw new ApiError('CANCELLED', 'Cancelled.');
+    if (signal?.aborted) throw new ApiError('CANCELLED', tr('Cancelled.'));
     throw err.name === 'TimeoutError'
-      ? new ApiError('TIMEOUT', 'Slow connection. Try again.', { retryable: true })
+      ? new ApiError('TIMEOUT', tr('Slow connection. Try again.'), { retryable: true })
       : OFFLINE();
   }
   const data = await res.json().catch(() => null);
   if (!res.ok || data?.ok === false) {
     const e = data?.error || {};
-    throw new ApiError(e.code || `HTTP_${res.status}`, e.message || 'Something went wrong.', {
+    throw new ApiError(e.code || `HTTP_${res.status}`, tr(e.message || 'Something went wrong.'), {
       retryable: Boolean(e.retryable) || res.status >= 500, status: res.status, field: e.field ?? null,
     });
   }

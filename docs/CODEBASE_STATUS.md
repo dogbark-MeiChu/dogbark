@@ -55,7 +55,7 @@ docs/  devlog/         規格與開發紀錄（見第 10 節）
 | 2 | Sell / Buy（Local Market）| `js/market/*` | `/api/market/*`（listings、buy-requests、offers、deals、sync）| `services/marketService.js` | migration 006 `market_*`；即時通知 = 每 4 秒輪詢 `/api/market/sync` |
 | 3 | Farmer Circle | `screens/farmerCircleHome.js`、`postDetail.js`、`createPost.js`… | `/api/forum/*` | `services/forumService.js` | migration 005 `forum_*`、011 翻譯快取 |
 | 4 | Ask AI | `screens/askAI*.js`、`js/askAI.js`、`js/media.js` | `/api/ai/capabilities`、`/ask`、`/ask-media` | `aiAdapter.js` → `geminiProvider.js`；`aiFallbacks.js` | Gemini（server 端 key）；失敗時回固定的離線清單 |
-| 5 | Today's Farm | `screens/farmOps.js` | `/api/farms/*` | `services/farmOpsService.js`、`sprayAssessment.js` | migration 007 `farm_*`、011 `price_snapshots` |
+| 5 | Today's Farm | `screens/farmOps.js` | `/api/farms/*`（一人可有多個農場；任務可 assign／reschedule／delay／cancel／unblock）| `services/farmOpsService.js`、`sprayAssessment.js`（逐時預報算最佳噴藥時段）| migration 007 `farm_*`、011 `price_snapshots` |
 | 6 | Weather | `screens/weather.js` | `GET /api/weather?lat&lng` | `services/weatherService.js` | Open-Meteo，30 分鐘快取，失敗時回舊資料（`stale:true`）|
 | 7 | Settings / 帳號 | `screens/identity.js` | `/api/auth/*` | `services/authService.js` | migration 004 |
 | — | `#` 朗讀 | `js/tts.js`、`screenText.js` | `POST /api/tts` | `services/ttsService.js` | Google 翻譯取得譯文，瀏覽器 `speechSynthesis` 發音 |
@@ -211,8 +211,7 @@ curl -s https://<host>/api/ai/capabilities  # 應回 {"ok":true,...}
 |---|---|---|
 | VM 還是 Node 18；repo 已統一為 22 | VM | 照第 8 節「Node 版本」在 VM 上升級 |
 | TTS：線上是 v3（手機 `speechSynthesis` 朗讀），但裝置缺越南語／孟加拉語語音包時會用中文發音；craby168 的 v2（伺服器產生 MP3 + Gemini 備援）還沒合併 | `services/ttsService.js`、`routes/tts.js`、`frontend/js/tts.js`；v2 在 `70efa82` | 等 craby168 測完後合併，見 `devlog-kris.md` |
-| 噴藥「最佳時段」寫死 06:00–10:00，畫面看起來像是算出來的 | `services/sprayAssessment.js` | 計畫第 3 項 |
-| Weather 與 Today's Farm 用兩套噴藥規則，同一地點可能結論相反 | `weatherService.advise()` vs `assessSprayConditions()` | 計畫第 3 項 |
+| Weather 畫面的建議（`weatherService.advise()`）仍是另一套規則，可能和 Today's Farm 的噴藥評估不同 | `weatherService.advise()` vs `assessSprayConditions()` | 計畫第 3 項後半 |
 | `server.js` 的功能啟用邏輯沒有測試 | `server.js` | 計畫第 4 項（`createApp`）|
 | 前端 fallback 地區還是 CEDA 時期的 `IN-CEDA-S9-D136` / `ceda-680` | `frontend/js/state.js` | 小問題，只影響沒有 profile 的情況 |
 | Market Prices 畫面在一次 session 內快取作物清單，同步完成前開過就要重新整理 | `screens/marketPrices.js` | 小問題 |

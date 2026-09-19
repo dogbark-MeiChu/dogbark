@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import { el, isCompact } from '../dom.js';
 import { composer, ask, history, track } from '../askAI.js';
 import { capabilities, loadFeatures, pickPhoto, pickAudio, loadDemoSample, DEMO_SAMPLES, VoiceRecorder, MAX_SECONDS, PERMISSION_WAIT_MS } from '../media.js';
@@ -22,19 +23,19 @@ function returnToComposer(ctx) {
 function optionItems() {
   const media = capabilities();
   const items = [
-    { id: 'photo', label: 'Photo', note: media.photo ? (media.camera ? 'Camera or gallery' : 'Choose a file') : 'Demo samples only' },
+    { id: 'photo', label: t('Photo'), note: t(media.photo ? (media.camera ? 'Camera or gallery' : 'Choose a file') : 'Demo samples only') },
     {
       id: 'voice',
-      label: 'Voice',
-      note: media.voice
+      label: t('Voice'),
+      note: t(media.voice
         ? (media.preferVoiceUpload || !media.voiceCapture ? 'Use phone recorder' : 'Up to 30 seconds')
-        : 'Not available on this device',
+        : 'Not available on this device'),
       disabled: !media.voice,
     },
-    { id: 'history', label: 'History', note: `${history().length} recent` },
-    { id: 'language', label: 'Language', note: composer.language === 'hi' ? 'हिंदी (Hindi)' : 'English' },
+    { id: 'history', label: t('History'), note: t('{n} recent', { n: history().length }) },
+    { id: 'language', label: t('Language'), note: composer.language === 'hi' ? 'हिंदी (Hindi)' : 'English' },
   ];
-  if (composer.image || composer.audio) items.push({ id: 'remove', label: 'Remove attachment', note: composer.attachmentLabel });
+  if (composer.image || composer.audio) items.push({ id: 'remove', label: t('Remove attachment'), note: composer.attachmentLabel });
   return items;
 }
 
@@ -67,7 +68,7 @@ export const AskAIMedia = {
       case 'photo': ctx.router.replace('AskAIPhoto', { from }); break;
       case 'voice':
         // Kept visible but inert when unsupported, and the composer is one key away.
-        if (it.disabled) ctx.router.replace('AskAIInput', { notice: 'Voice is not available. Type instead.' });
+        if (it.disabled) ctx.router.replace('AskAIInput', { notice: t('Voice is not available. Type instead.') });
         else ctx.router.replace('AskAIVoice', { from });
         break;
       case 'history': ctx.router.replace('AskAIHistory'); break;
@@ -97,16 +98,16 @@ function photoItems() {
 }
 
 const PHOTO_LABEL = {
-  capture: () => (capabilities().camera ? 'Take photo' : 'Choose photo'),
-  use: () => 'Use this photo',
-  retake: () => 'Retake',
-  remove: () => 'Remove',
+  capture: () => t(capabilities().camera ? 'Take photo' : 'Choose photo'),
+  use: () => t('Use this photo'),
+  retake: () => t('Retake'),
+  remove: () => t('Remove'),
 };
 
 export const AskAIPhoto = {
   name: 'AskAIPhoto',
   title: 'Photo',
-  statusBadge: () => (photo.preview ? (photo.preview.isDemoSample ? 'DEMO' : 'READY') : ''),
+  statusBadge: () => (photo.preview ? (photo.preview.isDemoSample ? t('DEMO') : t('READY')) : ''),
   softLeft: { label: '', handler() {} },
   render() {
     const wrap = el('ai-screen ai-photo');
@@ -114,11 +115,11 @@ export const AskAIPhoto = {
       const row = el('ai-photo-preview');
       const img = el('ai-thumb', null, 'img');
       img.src = photo.preview.previewUrl;
-      img.alt = 'Selected crop photo';
-      row.append(img, el('ai-attachment on', photo.preview.isDemoSample ? 'DEMO SAMPLE' : 'PHOTO READY'));
+      img.alt = t('Selected crop photo');
+      row.append(img, el('ai-attachment on', photo.preview.isDemoSample ? t('DEMO SAMPLE') : t('PHOTO READY')));
       wrap.appendChild(row);
     } else if (!isCompact()) {
-      wrap.appendChild(el('ai-privacy', 'Photo is sent to AI for this answer only. Shoot one leaf in daylight.'));
+      wrap.appendChild(el('ai-privacy', t('Photo is sent to AI for this answer only. Shoot one leaf in daylight.')));
     }
     if (photo.status) wrap.appendChild(el('ai-hint', photo.status));
 
@@ -126,7 +127,7 @@ export const AskAIPhoto = {
     photoItems().forEach((id) => {
       const sample = DEMO_SAMPLES.find((s) => s.id === id);
       const row = el('item');
-      if (sample) row.append(el('ai-chip dim', 'DEMO SAMPLE'), el('', ` ${sample.label}`, 'span'));
+      if (sample) row.append(el('ai-chip dim', t('DEMO SAMPLE')), el('', ` ${t(sample.label)}`, 'span'));
       else row.textContent = PHOTO_LABEL[id]();
       list.appendChild(row);
     });
@@ -142,14 +143,14 @@ export const AskAIPhoto = {
     const id = photoItems()[i];
     const refresh = () => { ctx.rerender(); };
     if (id === 'capture') {
-      photo.status = 'Opening camera…';
+      photo.status = t('Opening camera…');
       refresh();
       try {
         const picked = await pickPhoto();
-        photo.status = picked ? '' : 'No photo chosen.';
+        photo.status = picked ? '' : t('No photo chosen.');
         if (picked) photo.preview = picked;
       } catch (err) {
-        photo.status = err.message || 'Photo could not be read.';
+        photo.status = err.message || t('Photo could not be read.');
       }
       refresh();
       return;
@@ -158,7 +159,7 @@ export const AskAIPhoto = {
     if (sample) {
       const loaded = await loadDemoSample(sample);
       if (loaded) photo.preview = loaded;
-      else photo.status = 'Demo sample missing on server.';
+      else photo.status = t('Demo sample missing on server.');
       refresh();
       return;
     }
@@ -207,11 +208,11 @@ async function chooseVoiceFile(ctx) {
     voice.blob = blob;
     voice.seconds = null;
     voice.state = blob ? 'done' : 'idle';
-    voice.error = blob ? '' : 'No recording chosen.';
+    voice.error = blob ? '' : t('No recording chosen.');
   } catch (err) {
     if (generation !== voiceGeneration) return;
     voice.state = 'idle';
-    voice.error = err?.message || 'Recording could not be read.';
+    voice.error = err?.message || t('Recording could not be read.');
   }
   ctx.rerender();
 }
@@ -239,14 +240,14 @@ async function toggleRecord(ctx) {
   recorder = new VoiceRecorder({
     onTick: (s) => {
       voice.seconds = s;
-      const t = ctx.root.querySelector('.ai-timer');
-      if (t) t.textContent = `${String(s).padStart(2, '0')}s / ${MAX_SECONDS}s`;
+      const timer = ctx.root.querySelector('.ai-timer');
+      if (timer) timer.textContent = `${String(s).padStart(2, '0')}s / ${MAX_SECONDS}s`;
     },
     onStop: (blob, s) => {
       voice.blob = blob;
       voice.seconds = s;
       voice.state = blob ? 'done' : 'idle';
-      voice.error = blob ? '' : 'Nothing was recorded. Try again.';
+      voice.error = blob ? '' : t('Nothing was recorded. Try again.');
       ctx.rerender();
     },
   });
@@ -260,7 +261,7 @@ async function toggleRecord(ctx) {
     mine.cancel();
     recorder = null;
     voice.state = 'idle';
-    voice.error = `No microphone permission. Press Enter to retry.${DEBUG ? ' [no response]' : ''}`;
+    voice.error = `${t('No microphone permission. Press Enter to retry.')}${DEBUG ? ' [no response]' : ''}`;
     console.warn('voice: getUserMedia never settled (no prompt or no mic on this runtime)');
     ctx.rerender();
   }, PERMISSION_WAIT_MS);
@@ -273,7 +274,7 @@ async function toggleRecord(ctx) {
     // With ?debug=1 the raw error name is appended so a device can be diagnosed
     // (NotAllowedError, NotFoundError, NotReadableError, SecurityError, ...).
     const why = DEBUG ? ` [${err?.name || 'error'}]` : '';
-    voice.error = (err?.name === 'NotAllowedError' ? 'Microphone blocked. Type instead.' : 'Microphone not available.') + why;
+    voice.error = (err?.name === 'NotAllowedError' ? t('Microphone blocked. Type instead.') : t('Microphone not available.')) + why;
     console.warn('voice: getUserMedia failed', err?.name, err?.message);
     recorder = null;
     voice.state = 'idle';
@@ -286,14 +287,14 @@ async function toggleRecord(ctx) {
 export const AskAIVoice = {
   name: 'AskAIVoice',
   title: 'Voice',
-  statusBadge: () => ({ choosing: '… FILE', starting: '… MIC', recording: '● REC', done: voice.seconds ? `${voice.seconds}s` : 'READY' }[voice.state] || ''),
+  statusBadge: () => ({ choosing: t('… FILE'), starting: t('… MIC'), recording: t('● REC'), done: voice.seconds ? `${voice.seconds}s` : t('READY') }[voice.state] || ''),
   softLeft: {
-    label: () => (voice.state === 'done' ? 'Redo' : ''),
+    label: () => (voice.state === 'done' ? t('Redo') : ''),
     handler: (ctx) => { if (voice.state === 'done') { resetVoice(); ctx.rerender(); } },
   },
   softCenter: {
-    label: () => ({ choosing: '…', starting: '…', recording: 'Stop', done: 'Send' }[voice.state]
-      || (capabilities().preferVoiceUpload || !capabilities().voiceCapture ? 'Choose' : 'Record')),
+    label: () => ({ choosing: '…', starting: '…', recording: t('Stop'), done: t('Send') }[voice.state]
+      || t(capabilities().preferVoiceUpload || !capabilities().voiceCapture ? 'Choose' : 'Record')),
     handler: (ctx) => toggleRecord(ctx),
   },
   softRight: { label: 'Cancel', handler: (ctx) => { resetVoice(); ctx.router.pop(); } },
@@ -305,9 +306,9 @@ export const AskAIVoice = {
     for (let i = 0; i < 5; i++) level.appendChild(el('ai-level-bar'));
     mic.append(el('ai-orb'), level);
     wrap.appendChild(mic);
-    wrap.appendChild(el('ai-timer', voice.seconds == null ? 'RECORDING READY' : `${String(voice.seconds).padStart(2, '0')}s / ${MAX_SECONDS}s`));
+    wrap.appendChild(el('ai-timer', voice.seconds == null ? t('RECORDING READY') : `${String(voice.seconds).padStart(2, '0')}s / ${MAX_SECONDS}s`));
 
-    const hint = {
+    const hint = t({
       idle: capabilities().preferVoiceUpload || !capabilities().voiceCapture
         ? 'Press Enter to open the phone recorder.'
         : 'Press Enter and ask your question.',
@@ -315,10 +316,10 @@ export const AskAIVoice = {
       starting: 'Allow the microphone when the phone asks.',
       recording: 'Listening… Enter to stop.',
       done: '1 Play · Enter Send · Left Redo',
-    }[voice.state] || '';
+    }[voice.state] || '');
     wrap.appendChild(el('ai-hint', voice.error || hint));
     if (voice.state === 'idle' && !isCompact()) {
-      wrap.appendChild(el('ai-privacy', 'Voice is sent to AI for this answer only.'));
+      wrap.appendChild(el('ai-privacy', t('Voice is sent to AI for this answer only.')));
     }
     return wrap;
   },
@@ -354,7 +355,7 @@ export const AskAIHistory = {
     const list = el('ai-screen list');
     const items = history();
     if (!items.length) {
-      list.appendChild(el('msg', 'No questions yet. Your last five appear here.'));
+      list.appendChild(el('msg', t('No questions yet. Your last five appear here.')));
       return list;
     }
     items.forEach((q, i) => {

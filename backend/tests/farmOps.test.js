@@ -122,3 +122,142 @@ test('a member without a farm can start one, once, and use it', async () => {
     assert.equal((await t.ops.overview(user, farm.id, '2026-09-19')).summary.total, 1, task.id);
   } finally { await t.close(); }
 });
+
+test('a farmer can run several farms, each in its own region', async () => {
+  const t = await setup();
+  try {
+    const regionId = (await t.pool.query("SELECT id FROM app.regions WHERE code='IN-BR'")).rows[0].id;
+    const { user } = await t.auth.signup({ phone: '9199999998', pin: '135790', displayName: 'Two Farms', village: 'Hajipur', regionId });
+    const home = await t.ops.createFarm(user, { name: 'Home plot' });
+    const coop = await t.ops.createFarm(user, { name: 'River cooperative', regionCode: 'IN-UP-01' });
+    assert.notEqual(home.id, coop.id);
+    assert.deepEqual(await t.ops.createFarm(user, { name: '  home PLOT ' }), { id: home.id, duplicate: true }, 'same name again is the same farm');
+    const items = (await t.ops.farms(user)).items;
+    assert.deepEqual(items.map((f) => [f.name, f.region_code, f.role]), [['Home plot', 'IN-BR', 'owner'], ['River cooperative', 'IN-UP-01', 'owner']]);
+    assert.ok(items.every((f) => f.region_name), 'the list names each farm\'s region');
+    await assert.rejects(() => t.ops.createFarm(user, { name: 'Nowhere', regionCode: 'XX-NONE' }), (e) => e.code === 'VALIDATION_ERROR' && e.field === 'regionCode');
+    await assert.rejects(() => t.ops.createFarm(user, { name: 'x'.repeat(81) }), (e) => e.code === 'VALIDATION_ERROR');
+    // Each farm keeps its own work.
+    await t.ops.createTask(user, coop.id, { title: 'Canal check', type: 'irrigation', localDate: '2026-09-19', isAllDay: true });
+    assert.equal((await t.ops.overview(user, home.id, '2026-09-19')).summary.total, 0);
+    assert.equal((await t.ops.overview(user, coop.id, '2026-09-19')).summary.total, 1);
+  } finally { await t.close(); }
+});
+
+test('the weather row follows the chosen day: now, a forecast, or plainly nothing', async () => {
+  const { dayWeather } = await import('../services/farmOpsService.js');
+  const weather = { current: { time: '2026-09-19T10:00' }, daily: [
+    { date: '2026-09-19', code: 1, tmin: 22, tmax: 31, rain_prob: 10, rain_mm: 0, wind_max: 9 },
+    { date: '2026-09-20', code: 61, tmin: 21, tmax: 29, rain_prob: 70, rain_mm: 8, wind_max: 14 }] };
+  assert.equal(dayWeather(weather, '2026-09-19').basis, 'now');
+  assert.deepEqual(dayWeather(weather, '2026-09-20'), { basis: 'forecast', date: '2026-09-20', code: 61, tmin: 21, tmax: 29, rainProb: 70, rainMm: 8, windMax: 14 });
+  assert.equal(dayWeather(weather, '2026-09-18').basis, 'past');
+  assert.equal(dayWeather(weather, '2026-10-01').basis, 'beyond');
+  assert.equal(dayWeather(null, '2026-09-19'), null);
+});
+
+const taskByTitle = async (t, title) => (await t.pool.query(`SELECT id, status, local_date::text AS local_day, start_at, due_at, blocked_reason, delayed_reason
+  FROM app.farm_tasks WHERE farm_id=$1 AND title=$2`, [FARM_DEMO_ID, title])).rows[0];
+
+test('unblocking returns work to its assignee, or to the schedule, and clears the reason', async () => {
+  const t = await setup();
+  try {
+    const spray = await taskByTitle(t, 'Spray vegetable plot'); // blocked, assigned to the manager
+    await assert.rejects(() => t.ops.transition(t.worker, spray.id, 'assigned'), (e) => ['ROLE_REQUIRED'].includes(e.code));
+    assert.equal((await t.ops.transition(t.owner, spray.id, 'assigned')).status, 'assigned');
+    assert.equal((await taskByTitle(t, 'Spray vegetable plot')).blocked_reason, null);
+    const leaf = await taskByTitle(t, 'Check rice leaf spots'); // assigned to the manager
+    await t.pool.query(`UPDATE app.farm_task_assignments SET status='removed' WHERE task_id=$1`, [leaf.id]);
+    await t.pool.query(`UPDATE app.farm_tasks SET status='blocked', blocked_reason='Pump broken' WHERE id=$1`, [leaf.id]);
+    assert.equal((await t.ops.transition(t.manager, leaf.id, 'assigned')).status, 'scheduled', 'no one had it');
+  } finally { await t.close(); }
+});
+
+test('owners and managers reassign tasks; the new assignee accepts again', async () => {
+  const t = await setup();
+  try {
+    const water = await taskByTitle(t, 'Irrigate north section'); // in progress
+    const leaf = await taskByTitle(t, 'Check rice leaf spots');   // assigned to the manager
+    await t.ops.transition(t.manager, leaf.id, 'accepted');
+    await assert.rejects(() => t.ops.assign(t.worker, leaf.id, { userId: t.worker.id }), (e) => e.code === 'ROLE_REQUIRED');
+    await assert.rejects(() => t.ops.assign(t.owner, leaf.id, { userId: t.viewer.id }), (e) => e.field === 'userId');
+    await assert.rejects(() => t.ops.assign(t.owner, leaf.id, { userId: 'nope' }), (e) => e.field === 'userId');
+    assert.equal((await t.ops.assign(t.owner, leaf.id, { userId: t.worker.id })).status, 'assigned', 'accepted work must be accepted again');
+    const people = (await t.pool.query(`SELECT user_id, status FROM app.farm_task_assignments WHERE task_id=$1 AND status<>'removed'`, [leaf.id])).rows;
+    assert.deepEqual(people.map((p) => p.user_id), [t.worker.id], 'the previous assignee is removed');
+    assert.equal((await t.ops.getTask(t.worker, leaf.id)).item.assignments[0].userId, t.worker.id);
+    assert.equal((await t.ops.assign(t.owner, water.id, { userId: t.worker.id })).status, 'in_progress');
+    const done = await taskByTitle(t, 'Record tomato soil moisture');
+    await assert.rejects(() => t.ops.assign(t.owner, done.id, { userId: t.worker.id }), (e) => e.code === 'INVALID_STATUS_TRANSITION');
+  } finally { await t.close(); }
+});
+
+test('moving a task keeps its time of day and puts delayed work back on the plan', async () => {
+  const t = await setup();
+  try {
+    const pump = await taskByTitle(t, 'Inspect pump'); // 2026-09-18, assigned to the owner
+    await t.ops.transition(t.owner, pump.id, 'delayed', { reason: 'Waiting for parts' });
+    await assert.rejects(() => t.ops.reschedule(t.worker, pump.id, { localDate: '2026-09-21' }), (e) => e.code === 'ROLE_REQUIRED');
+    await assert.rejects(() => t.ops.reschedule(t.owner, pump.id, { localDate: '21-09-2026' }), (e) => e.field === 'localDate');
+    assert.deepEqual(await t.ops.reschedule(t.owner, pump.id, { localDate: '2026-09-21' }), { id: pump.id, status: 'assigned', localDate: '2026-09-21' });
+    const moved = await taskByTitle(t, 'Inspect pump');
+    assert.equal(moved.local_day, '2026-09-21');
+    assert.equal(moved.delayed_reason, null);
+    assert.equal(new Date(moved.start_at) - new Date(pump.start_at), 3 * 86400000);
+    assert.equal(new Date(moved.due_at) - new Date(pump.due_at), 3 * 86400000);
+    const overview = await t.ops.overview(t.owner, FARM_DEMO_ID, '2026-09-19');
+    assert.ok(!overview.sections.overdue.some((x) => x.id === pump.id), 'no longer overdue');
+  } finally { await t.close(); }
+});
+
+test('work still in progress from an earlier day is "in progress", not overdue', async () => {
+  const t = await setup();
+  try {
+    const next = await t.ops.overview(t.owner, FARM_DEMO_ID, '2026-09-20');
+    assert.ok(next.sections.inProgress.some((x) => x.title === 'Irrigate north section'));
+    assert.ok(!next.sections.overdue.some((x) => x.title === 'Irrigate north section'));
+    assert.ok(next.sections.overdue.some((x) => x.title === 'Inspect pump'), 'not started is still overdue');
+  } finally { await t.close(); }
+});
+
+test('the market row covers the crops the farm grows, else the member\'s crops', async () => {
+  const t = await setup();
+  try {
+    const asked = [];
+    const farmPriceService = { async getFarmPrices(farm, crop) {
+      asked.push(crop);
+      return crop === 'onion' ? null : { crop, provider: 'agmarknet', source: 'live', stale: false, fetchedAt: 'now',
+        localMarket: { modalPrice: 2000 }, nearbyMarkets: [], sevenDayTrend: [1900, 2000] };
+    } };
+    const ops = createFarmOpsService(t.pool, { farmPriceService });
+    const demo = await ops.overview(t.owner, FARM_DEMO_ID, '2026-09-19');
+    assert.deepEqual(demo.marketSnapshots.map((m) => m.crop), ['rice', 'tomato'], 'from the crop cycles, earliest planted first');
+    assert.equal(demo.marketSnapshot.crop, 'rice');
+
+    const regionId = (await t.pool.query("SELECT id FROM app.regions WHERE code='IN-BR'")).rows[0].id;
+    const { user } = await t.auth.signup({ phone: '9199999997', pin: '135790', displayName: 'No Cycles', village: 'Hajipur', regionId });
+    const farm = await ops.createFarm(user, { name: 'Bare farm' });
+    asked.length = 0;
+    const bare = await ops.overview({ ...user, cropCodes: ['onion', 'wheat'] }, farm.id, '2026-09-19');
+    assert.deepEqual(asked, ['onion', 'wheat']);
+    assert.deepEqual(bare.marketSnapshots.map((m) => m.crop), ['wheat'], 'crops without prices are left out');
+    asked.length = 0;
+    await ops.overview({ ...user, cropCodes: [] }, farm.id, '2026-09-19');
+    assert.deepEqual(asked, ['rice']);
+  } finally { await t.close(); }
+});
+
+test('tasks can be listed for one member or one field, open ones only', async () => {
+  const t = await setup();
+  try {
+    const q = (query) => t.ops.listTasks(t.owner, FARM_DEMO_ID, query).then((r) => r.items.map((x) => x.title).sort());
+    const meena = await q({ assignee: t.manager.id, open: 'true' });
+    assert.deepEqual(meena, ['Check rice leaf spots', 'Inspect weeds', 'Spray vegetable plot']);
+    const field = (await t.pool.query(`SELECT id FROM app.farm_fields WHERE farm_id=$1 AND name='Vegetable Plot'`, [FARM_DEMO_ID])).rows[0].id;
+    assert.ok(!(await q({ field, open: 'true' })).includes('Record tomato soil moisture'), 'completed work is left out');
+    assert.ok((await q({ field })).includes('Record tomato soil moisture'));
+    assert.deepEqual(await q({ assignee: 'not-a-uuid' }), []);
+    const fields = (await t.ops.fields(t.owner, FARM_DEMO_ID)).items;
+    assert.equal(fields.find((f) => f.name === 'Field A').cycles[0].variety, 'Swarna');
+  } finally { await t.close(); }
+});

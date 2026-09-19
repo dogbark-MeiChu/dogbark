@@ -1,35 +1,36 @@
+import { t } from '../i18n/index.js';
 // Pure helpers for Farmer Circle screens. No DOM, no network.
 
 export const COMMUNITIES = [
-  { slug: 'crop-talk', name: 'Crop Talk' },
-  { slug: 'machinery', name: 'Machinery' },
-  { slug: 'market-talk', name: 'Market Talk' },
-  { slug: 'livestock', name: 'Livestock' },
-  { slug: 'farm-life', name: 'Farm Life' },
+  { slug: 'crop-talk', name: t('Crop Talk') },
+  { slug: 'machinery', name: t('Machinery') },
+  { slug: 'market-talk', name: t('Market Talk') },
+  { slug: 'livestock', name: t('Livestock') },
+  { slug: 'farm-life', name: t('Farm Life') },
 ];
 export const communityName = (slug) => COMMUNITIES.find((c) => c.slug === slug)?.name || slug;
 
 export const SORTS = ['local', 'new', 'top'];
-export const SORT_LABEL = { local: 'Local', new: 'New', top: 'Top' };
-export const TYPE_LABEL = { question: 'Question', discussion: 'Discussion', local_report: 'User report' };
+export const SORT_LABEL = { local: t('Local'), new: t('New'), top: t('Top') };
+export const TYPE_LABEL = { question: t('Question'), discussion: t('Discussion'), local_report: t('User report') };
 export const REASON_LABEL = {
-  spam: 'Spam', scam: 'Scam/payment request', harassment: 'Harassment',
-  dangerous_advice: 'Dangerous advice', false_information: 'False information', other: 'Other',
+  spam: t('Spam'), scam: t('Scam/payment request'), harassment: t('Harassment'),
+  dangerous_advice: t('Dangerous advice'), false_information: t('False information'), other: t('Other'),
 };
-export const SCOPE_LABEL = { region: 'Near me', country: 'My country', global: 'Everywhere' };
+export const SCOPE_LABEL = { region: t('Near me'), country: t('My country'), global: t('Everywhere') };
 
 export function relTime(iso, now = Date.now()) {
   const s = Math.max(0, (now - Date.parse(iso)) / 1000);
   if (!Number.isFinite(s)) return '';
-  if (s < 60) return 'now';
-  if (s < 3600) return `${Math.floor(s / 60)}m`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h`;
-  if (s < 604800) return `${Math.floor(s / 86400)}d`;
-  return `${Math.floor(s / 604800)}w`;
+  if (s < 60) return t('now');
+  if (s < 3600) return t('{n}m', { n: Math.floor(s / 60) });
+  if (s < 86400) return t('{n}h', { n: Math.floor(s / 3600) });
+  if (s < 604800) return t('{n}d', { n: Math.floor(s / 86400) });
+  return t('{n}w', { n: Math.floor(s / 604800) });
 }
 
-export const tagLabel = (slug) => slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, ' ');
-export const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+export const tagLabel = (slug) => t(slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, ' '));
+export const plural = (n, one, many = `${one}s`) => t(n === 1 ? `{n} ${one}` : `{n} ${many}`, { n });
 export const replies = (n) => plural(n, 'reply', 'replies');
 export const scoreText = (n) => `${n < 0 ? '▼' : '▲'}${Math.abs(n)}`;
 
@@ -50,19 +51,19 @@ export function newRequestId() {
 // validation text) are shown verbatim because they are already user-safe.
 export function errorText(err) {
   switch (err?.code) {
-    case 'OFFLINE': return 'No network. Check your signal.';
-    case 'TIMEOUT': return 'Slow connection. Try again.';
-    case 'AUTH_REQUIRED': return 'Please sign in.';
-    case 'INVALID_CREDENTIALS': return 'Invalid Farm ID or PIN';
-    case 'ACCOUNT_SUSPENDED': return 'This account is not active.';
-    case 'FORBIDDEN': return err.message || 'Not allowed.';
-    case 'NOT_FOUND': return 'Not found. It may have been removed.';
-    case 'POST_LOCKED': return 'This post is locked.';
-    case 'ALREADY_REPORTED': return 'Already reported. Thank you.';
+    case 'OFFLINE': return t('No network. Check your signal.');
+    case 'TIMEOUT': return t('Slow connection. Try again.');
+    case 'AUTH_REQUIRED': return t('Please sign in.');
+    case 'INVALID_CREDENTIALS': return t('Invalid Farm ID or PIN');
+    case 'ACCOUNT_SUSPENDED': return t('This account is not active.');
+    case 'FORBIDDEN': return err.message || t('Not allowed.');
+    case 'NOT_FOUND': return t('Not found. It may have been removed.');
+    case 'POST_LOCKED': return t('This post is locked.');
+    case 'ALREADY_REPORTED': return t('Already reported. Thank you.');
     case 'VALIDATION_ERROR':
     case 'RATE_LIMITED':
     case 'ACCOUNT_LOCKED': return err.message;
-    default: return 'Something went wrong. Try again.';
+    default: return t('Something went wrong. Try again.');
   }
 }
 

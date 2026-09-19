@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import { el, isCompact } from '../dom.js';
 import { forumApi } from '../forum/forumApi.js';
 import {
@@ -46,9 +47,9 @@ function load(ctx, { more = false } = {}) {
 function filterLine() {
   const bits = [];
   if (forum.tag) bits.push(`#${forum.tag}`);
-  if (forum.scope !== 'global') bits.push(forum.scope === 'region' ? 'Near me' : 'My country');
-  if (forum.type) bits.push(forum.type.replace('_', ' '));
-  if (forum.status) bits.push(forum.status);
+  if (forum.scope !== 'global') bits.push(t(forum.scope === 'region' ? 'Near me' : 'My country'));
+  if (forum.type) bits.push(t(forum.type.replace('_', ' ')));
+  if (forum.status) bits.push(t(forum.status));
   return bits.join(' · ');
 }
 
@@ -91,17 +92,17 @@ export default {
     if (entry.error && !entry.items.length) { wrap.appendChild(errorView(entry.error)); return wrap; }
     if (!entry.loaded && !entry.items.length) { wrap.appendChild(loadingView()); return wrap; }
     if (!entry.items.length) {
-      wrap.appendChild(emptyView('No posts here yet.', 'Press New to start the first one.'));
+      wrap.appendChild(emptyView(t('No posts here yet.'), t('Press New to start the first one.')));
       return wrap;
     }
     const list = el('list');
     for (const p of entry.items) list.appendChild(postRow(p, { showRegion: forum.sort === 'local' }));
     if (entry.nextCursor) {
-      const more = el('item forum-more', entry.loading ? 'Loading…' : 'Load more…');
+      const more = el('item forum-more', entry.loading ? t('Loading…') : t('Load more…'));
       more.dataset.act = 'more';
       list.appendChild(more);
     } else if (entry.error) {
-      const retry = el('item forum-more', 'Could not load more. Retry');
+      const retry = el('item forum-more', t('Could not load more. Retry'));
       retry.dataset.act = 'more';
       list.appendChild(retry);
     }

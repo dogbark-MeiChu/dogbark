@@ -1,3 +1,4 @@
+import { t } from './i18n/index.js';
 import { Focus } from './focus.js';
 import { readAloud, stop as stopTts, isPlaying } from './tts.js';
 import { extractScreenText } from './screenText.js';
@@ -17,7 +18,7 @@ export function createRouter({ screens, els, ctxExtra = {} }) {
     ctx.params = entry.params;
     // A screen may compute its title, and may add a right-aligned badge
     // (confidence, recording state) without owning the header element.
-    els.status.textContent = (typeof screen.title === 'function' ? screen.title(ctx) : screen.title) || screen.name;
+    els.status.textContent = t((typeof screen.title === 'function' ? screen.title(ctx) : screen.title) || screen.name);
     const badge = screen.statusBadge?.(ctx);
     if (badge) {
       const b = document.createElement('span');
@@ -38,10 +39,10 @@ export function createRouter({ screens, els, ctxExtra = {} }) {
     const fi = screen.initialFocus?.(ctx);
     if (fi != null) focus.set(fi);
     const l = screen.softLeft, c = screen.softCenter, r = screen.softRight;
-    const label = (k) => (typeof k.label === 'function' ? k.label(ctx) : k.label);
-    els.sl.textContent = l ? label(l) : 'Menu';
-    els.sc.textContent = c ? label(c) : (focus.items.length ? 'Select' : '');
-    els.sr.textContent = r ? label(r) : (stack.length > 1 ? 'Back' : 'Exit');
+    const label = (k) => t(typeof k.label === 'function' ? k.label(ctx) : k.label);
+    els.sl.textContent = l ? label(l) : t('Menu');
+    els.sc.textContent = c ? label(c) : (focus.items.length ? t('Select') : '');
+    els.sr.textContent = r ? label(r) : (stack.length > 1 ? t('Back') : t('Exit'));
     screen.onShow?.(ctx);
   }
 

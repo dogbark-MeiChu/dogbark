@@ -486,3 +486,63 @@
 - **@craby168**：v2 Hybrid 的程式碼在 `70efa82`（`git show 70efa82:backend/services/ttsService.js`，看 `<<<<<<< HEAD` 那段）。合併時請把後端回傳格式、`routes/tts.js`、`frontend/js/tts.js` 一起改，並在 VM 上實測 Google MP3 會不會被擋、Gemini 語音模型能不能用。建議開分支或 PR，CI 會先跑測試和 smoke，衝突標記這類錯誤會在合併前被擋下。
 - 可以考慮的折衷：保留 v3（手機朗讀），只在瀏覽器沒有該語言的語音時（`speechSynthesis.getVoices()` 找不到 `vi` / `bn`）才向後端要音檔。
 - push 前請先跑 `npm test`；`git grep -n '^<<<<<<<'` 可以檢查有沒有漏掉的衝突標記。
+
+---
+
+## 202609192011 GMT+8 — Today's Farm：多農場，以及 8 項問題修正（分支 `todays-farm`）
+
+### 發現／問題
+
+- 一個農夫可能有好幾個農場（自己的地、家族農場、合作社），但 `createFarm` 發現已有農場就直接回傳那一個，只能有一個。
+- 逐頁操作後整理出 8 項問題：切換日期時天氣仍是「現在」；噴藥最佳時段寫死 06:00–10:00、風太小等原因沒寫；被卡住的任務看不到原因、也無法解除；不能改派、改日期、延後、取消，快速新增不能選田區；昨天開始、還在做的任務被歸到 OVERDUE；行情列固定只看稻米；紀錄／團隊／田區點不進去；歷史時間是雲端瀏覽器的時區與美式格式。
+
+### 做了什麼改動（每項一個 commit）
+
+- **多農場**：`POST /api/farms` 接受 `{ name, regionCode }`（預設為個人資料的地區；同名回傳原農場；每人最多 10 個）。農場清單顯示地區，最後一列「+ Add a farm」（輸入名稱 → 選地區）；儀表板按 1 回到清單切換農場。
+- **1 天氣跟著日期**：Open-Meteo 改抓 7 天並保留逐時資料（Weather 畫面仍顯示 3 天）。今天顯示現在的天氣，7 天內顯示當天預報，其他日期直接寫「Past day · no forecast」。
+- **2 噴藥**：`bestSprayWindow()` 取白天（06–18 時）沒有任何 unsuitable 條件的最長連續時段；今天只從目前這個小時算起，找不到就寫「no safe window」。門檻不變，但每個非 optimal 的條件都附原因（例如風太小：逆溫，藥霧會飄散）。未來日期依當天預報評估。
+- **3 被卡住**：詳情顯示卡住、延後、取消的原因；owner／manager 可 Unblock（有負責人就回到 assigned，沒有就回到 scheduled，並清除原因）；Report problem 改成從原因清單選。
+- **4 操作**：詳情頁新增「Options…」，依角色列出指派（`POST /tasks/:id/assign`）、改日期（`POST /tasks/:id/reschedule`，時段一起平移）、延後與取消（選原因）。快速新增改成先選種類、再選田區。歷史顯示實際事件（reassigned、moved to Sep 21）。
+- **5**：進行中的任務在之後的日子仍列在 IN PROGRESS，並標示「from Sep 19」。
+- **6 行情**：依農場的作物週期（沒有就用會員的作物，再沒有才用稻米），最多 3 種，按 Enter 切換（1/2）。回應保留 `marketSnapshot`，新增 `marketSnapshots`。
+- **7 詳情**：紀錄、成員、田區都能點進去；任務清單 API 新增 `assignee`、`field`、`open` 篩選，田區回應補上品種。
+- **8 時間**：歷史時間改用農場時區，格式如「Sep 19 17:37」。
+
+### 部署與驗證
+
+- 本機 175/175 測試通過（新增：多農場、日期天氣、噴藥時段與原因、解除卡住、改派、改日期、跨日進行中、作物行情、成員／田區篩選）。
+- `farm-dev` 240×320 逐項操作驗證，128×160 可用。行情的多作物切換在本機沒有番茄行情，是用測試時注入的回應確認畫面；實際資料要等 VM 上的即時行情。
+- **尚未 merge 到 main，也尚未部署。**
+
+### 組員注意事項
+
+- 沒有新的 migration，全部沿用 007／011 的欄位。
+- Weather 畫面的 `advise()` 仍是另一套規則（計畫第 3 項後半，還沒做）。
+- 新畫面沿用論壇的 `ForumPicker` 和市場的 `MarketText`，改這兩個元件時請留意 Today's Farm。
+
+---
+
+## 202609192032 GMT+8 — 修 main 的 CI；todays-farm rebase 到 i18n 之後
+
+### 發現／問題
+
+- main 的 CI 在 `2fb73a4`、`fa40588` 都失敗：craby168 的 TTS 改成回傳音檔，但 TTS 快取測試還在檢查 `{ ok, text }`；`ttsService.test.js` 被刪除；TTS 錯誤回應少了 requestId。`2fb73a4` 的 `frontend/js/tts.js` 還有語法錯誤（emoji 變成 `??`，吃掉字串結尾引號，整個 app 會白畫面），Yoyo 在 `fa40588` 修好了。
+- Yoyo 的 i18n（`b5507ce`）把 `farmOps.js` 幾乎每個字串都包上 `t()`，和 todays-farm 的改寫衝突；`weather.js` 也有小衝突。
+
+### 做了什麼改動
+
+- main `3543cc1`：TTS 快取測試改成檢查音檔；新增「兩種雲端語音都失敗時回傳 `fallbackText`」的測試；TTS 錯誤回應改回共用格式（有 requestId）。GitHub CI 通過。
+- todays-farm rebase 到最新 main：rebase 時 `farmOps.js` 先採用本分支的版本，`weather.js` 手動合併（`wmo` 匯出，並保留翻譯）。最後一個 commit 把 `farmOps.js` 全部字串重新包上 `t()`，沿用 Yoyo 的 key，日期改用 `dateLocale`；三個語言各新增 120 條翻譯，並刪除 5 條已經沒有畫面使用的 key。
+- 噴藥最佳時段多回傳 `watch`（要注意的條件），讓前端能用會員的語言組句子。
+
+### 部署與驗證
+
+- 本機 172/172 測試通過（含 i18n 測試）、smoke 通過、前端全部檔案可解析。
+- `farm-dev` 240×320：英文與 Hindi 模式都驗證了農場清單、儀表板、任務詳情、Options、取消原因選單。
+- **todays-farm 尚未 push、尚未合進 main、尚未部署。**
+
+### 組員注意事項
+
+- 介面語言以會員個人資料為準（登入後會覆寫 localStorage），測試其他語言要改個人資料的語言。
+- 新加的 Hindi／Bengali／Vietnamese 譯文由我撰寫，請母語組員看過再 demo。
+- @craby168：`ttsService.test.js` 已刪除，新版 service 沒辦法注入 Google 翻譯，建議之後把測試補回來。

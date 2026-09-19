@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import { el } from '../dom.js';
 import { auth, currentFlash } from '../forum/forumState.js';
 import { flashLine } from '../forum/ui.js';
@@ -28,7 +29,7 @@ export default {
     ROWS.forEach((label, i) => {
       const row = el('item forum-choice');
       row.appendChild(el('forum-choice-n', String(i + 1), 'span'));
-      row.appendChild(el('forum-choice-label', label, 'span'));
+      row.appendChild(el('forum-choice-label', t(label), 'span'));
       list.appendChild(row);
     });
     wrap.appendChild(list);

@@ -10,8 +10,9 @@ import askAIInput from './screens/askAIInput.js';
 import askAIThinking from './screens/askAIThinking.js';
 import askAIAnswer, { AskAISources } from './screens/askAIAnswer.js';
 import { AskAIMedia, AskAIPhoto, AskAIVoice, AskAIHistory } from './screens/askAIMedia.js';
-import { AuthWelcome, AuthPhone, AuthPin, ProfileName, ProfileVillage, ProfileRegion, AuthResult, Settings, ProfileSummary, LanguageSettings, CropSettings } from './screens/identity.js';
+import { AuthWelcome, AuthPhone, AuthPin, ProfileName, ProfileVillage, ProfileRegion, AuthResult, Settings, ProfileSummary, LanguageSettings, CropSettings, WelcomeLanguage } from './screens/identity.js';
 import { getJSON } from './api.js';
+import { setLanguage } from './i18n/index.js';
 import { identity } from './state.js';
 import farmerCircleHome from './screens/farmerCircleHome.js';
 import postDetail from './screens/postDetail.js';
@@ -38,7 +39,7 @@ const screens = {
   MainMenu: mainMenu, Weather: weather, MarketPrices: marketPrices, PriceDetail: priceDetail, ComingSoon: comingSoon,
   AskAIHome: askAIHome, AskAIInput: askAIInput, AskAIThinking: askAIThinking, AskAIAnswer: askAIAnswer,
   AskAISources, AskAIMedia, AskAIPhoto, AskAIVoice, AskAIHistory,
-  AuthWelcome, AuthPhone, AuthPin, ProfileName, ProfileVillage, ProfileRegion, AuthResult, Settings, ProfileSummary, LanguageSettings, CropSettings,
+  AuthWelcome, AuthPhone, AuthPin, ProfileName, ProfileVillage, ProfileRegion, AuthResult, Settings, ProfileSummary, LanguageSettings, CropSettings, WelcomeLanguage,
   ...farmerCircle,
   MarketHome, MarketFeed, MarketFilter, MarketDetail, MarketForm, MarketNumber, MarketText, MarketOffers, MarketOffer, MarketDeals, MarketDeal, MarketReason,
   ...farmOpsScreens,
@@ -53,6 +54,7 @@ initKeypad(router.dispatch, { debug: new URLSearchParams(location.search).has('d
 try {
   const session = await getJSON('/api/auth/session');
   identity.profile = session.user;
+  if (session.user?.language && setLanguage(session.user.language)) await new Promise(() => {}); // reloading in the member's language
   router.start(session.user ? 'MainMenu' : 'AuthWelcome');
 } catch {
   // A local price-only demo may intentionally run without PostgreSQL/auth.

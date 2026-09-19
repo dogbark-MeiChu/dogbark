@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import { el } from '../dom.js';
 import { forumApi } from '../forum/forumApi.js';
 import { auth, forum } from '../forum/forumState.js';
@@ -24,11 +25,11 @@ function collection({ name, title, fetch, empty, hint, afterLoad }) {
     render(ctx) {
       ctx.root.classList.add('forum-scroll');
       const wrap = el('forum-screen');
-      if (!auth.authenticated) { wrap.appendChild(emptyView('Sign in to see this list.')); return wrap; }
+      if (!auth.authenticated) { wrap.appendChild(emptyView(t('Sign in to see this list.'))); return wrap; }
       if (!state) start(ctx);
       if (state.status === 'loading') wrap.appendChild(loadingView());
       else if (state.status === 'error') wrap.appendChild(errorView(state.error));
-      else if (!state.items.length) wrap.appendChild(emptyView(empty, hint));
+      else if (!state.items.length) wrap.appendChild(emptyView(t(empty), t(hint)));
       else { const list = el('list'); state.items.forEach((p) => list.appendChild(postRow(p, { showRegion: true }))); wrap.appendChild(list); }
       return wrap;
     },

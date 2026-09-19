@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import { el, isCompact } from '../dom.js';
 
 // Generic numbered choice list, registered under several names (CreatePostType,
@@ -33,15 +34,15 @@ function makePicker(name) {
     render(ctx) {
       const p = ctx.params;
       const wrap = el('forum-screen');
-      if (p.note && !isCompact()) wrap.appendChild(el('forum-note', p.note));
-      if (!p.options?.length) { wrap.appendChild(el('forum-empty', p.empty || 'Nothing to choose.')); return wrap; }
+      if (p.note && !isCompact()) wrap.appendChild(el('forum-note', t(p.note)));
+      if (!p.options?.length) { wrap.appendChild(el('forum-empty', t(p.empty || 'Nothing to choose.'))); return wrap; }
       const list = el('list');
       const picked = p.multi ? values(ctx) : null;
       p.options.forEach((o, i) => {
         const on = p.multi ? picked.has(o.value) : o.value === p.selected;
         const row = el('item forum-choice');
         row.appendChild(el('forum-choice-n', i < 9 ? String(i + 1) : '·', 'span'));
-        row.appendChild(el('forum-choice-label', o.label, 'span'));
+        row.appendChild(el('forum-choice-label', t(o.label), 'span'));
         if (p.multi) row.appendChild(el('forum-check', on ? '[x]' : '[ ]', 'span'));
         else if (on) row.appendChild(el('forum-check', '✓', 'span'));
         list.appendChild(row);

@@ -62,7 +62,7 @@
 
 **相容性**：前端只依 `AUTH_REQUIRED` 和 `CANCELLED` 分支，兩者不變；`getJSON` 只看 HTTP status。HTTP status 與訊息文字不變。
 
-## 3. 噴藥評估：同一套規則 + 真的最佳時段（下一輪）
+## 3. 噴藥評估：同一套規則 + 真的最佳時段（最佳時段 ✅ 已完成，`todays-farm` 分支；統一規則待做）
 
 **問題**：
 - `sprayAssessment.js` 的 `bestWindow` 寫死 06:00–10:00（`weatherService` 從不提供 `bestSprayWindow`），Today's Farm 卻顯示得像是算出來的。
@@ -70,7 +70,8 @@
 
 **做法**：
 - `weatherService.normalize()` 已經抓了逐時風速 / 溫度 / 濕度 / 降雨機率，把逐時陣列保留在回應中，由 `sprayAssessment` 依逐時資料算最長的合格時段（**不要**照抄舊文件的 `findBestWindow`：最長的一段在資料末尾時 `to` 會是空的）。
-- `advise()` 改由 `assessSprayConditions()` 推出，Weather 畫面的 `advice.action` / `reason` 欄位名稱不變。
+- ✅ 已完成：`bestSprayWindow()` 依逐時預報算最長的合格時段，每個非 optimal 的條件都附原因；未來日期依當天預報評估。
+- 待做：`advise()` 改由 `assessSprayConditions()` 推出，Weather 畫面的 `advice.action` / `reason` 欄位名稱不變。
 - 測試：時段在末尾、整天都不合格、缺資料。
 
 ## 4. `createApp()` 工廠（下一輪）

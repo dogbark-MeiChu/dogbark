@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import { el } from '../dom.js';
 import { emptyView, loadingView } from '../forum/ui.js';
 import { marketApi } from './marketApi.js';
@@ -64,10 +65,10 @@ export const MarketOffers = listScreen({
   name: 'MarketOffers',
   title: 'My offers',
   fetch: (p) => marketApi.offers(p.role),
-  emptyText: (p) => (p.role === 'outgoing' ? 'You have not sent any offers.' : 'No offers waiting for your answer.'),
-  item: (o) => card(o.id, `${o.awaitingMyResponse ? '● ' : ''}${o.crop.name} · ${fmtNum(o.terms.quantity)} ${o.terms.unit}`,
-    `${perUnit(o.terms.unitPrice, o.terms.currency, o.terms.unit)} · ${o.counterparty.displayName}`,
-    `${o.awaitingMyResponse ? 'Your turn' : OFFER_STATUS[o.status]} · ${relTime(o.updatedAt)}`),
+  emptyText: (p) => t(p.role === 'outgoing' ? 'You have not sent any offers.' : 'No offers waiting for your answer.'),
+  item: (o) => card(o.id, `${o.awaitingMyResponse ? '● ' : ''}${t(o.crop.name)} · ${fmtNum(o.terms.quantity)} ${t(o.terms.unit)}`,
+    `${perUnit(o.terms.unitPrice, o.terms.currency, t(o.terms.unit))} · ${o.counterparty.displayName}`,
+    `${o.awaitingMyResponse ? t('Your turn') : OFFER_STATUS[o.status]} · ${relTime(o.updatedAt)}`),
   softLeft: { label: (ctx) => (ctx.params.role === 'incoming' ? 'Sent' : 'Inbox'), handler(ctx) { ctx.params.role = ctx.params.role === 'incoming' ? 'outgoing' : 'incoming'; ctx.params.state = null; ctx.rerender(); } },
 });
 const offersTitle = MarketOffers.title;
@@ -82,28 +83,28 @@ export const MarketOffer = {
     ctx.root.classList.add('forum-scroll');
     const p = ctx.params;
     const wrap = el('forum-screen');
-    if (p.busy) { wrap.appendChild(loadingView('Working…')); return wrap; }
+    if (p.busy) { wrap.appendChild(loadingView(t('Working…'))); return wrap; }
     const status = stateView(ctx, () => marketApi.getOffer(p.id));
     if (status) { wrap.appendChild(status); return wrap; }
     const { item: o, revisions } = p.state.data;
     p.actions = offerActions(ctx, o);
     if (p.notice) wrap.appendChild(el('forum-flash', p.notice));
-    const t = o.terms;
+    const terms = o.terms;
     const info = el('forum-profile-card');
-    info.appendChild(el('forum-title forum-title--full', `${o.crop.name} · ${OFFER_STATUS[o.status]}`));
+    info.appendChild(el('forum-title forum-title--full', `${t(o.crop.name)} · ${OFFER_STATUS[o.status]}`));
     info.appendChild(line('With', o.counterparty.displayName));
     for (const ev of evidenceLines(o.counterparty.evidence)) info.appendChild(ev);
-    info.appendChild(line('Quantity', `${fmtNum(t.quantity)} ${t.unit}`));
-    info.appendChild(line('Price', perUnit(t.unitPrice, t.currency, t.unit)));
-    info.appendChild(line('Est. total', money(t.estimatedTotal, t.currency)));
-    info.appendChild(line('Pickup', `${dateLabel(t.pickupDate)} ${windowLabel(t.pickupWindowStart, t.pickupWindowEnd)}`));
-    info.appendChild(line('Payment', `${PAYMENT_LABEL[t.paymentMethod]}`));
-    if (t.note) info.appendChild(line('Note', t.note));
-    info.appendChild(line('Round', `${revisions.length}${o.proposedByMe ? ' · yours' : ' · theirs'}`));
+    info.appendChild(line('Quantity', `${fmtNum(terms.quantity)} ${t(terms.unit)}`));
+    info.appendChild(line('Price', perUnit(terms.unitPrice, terms.currency, t(terms.unit))));
+    info.appendChild(line('Est. total', money(terms.estimatedTotal, terms.currency)));
+    info.appendChild(line('Pickup', `${dateLabel(terms.pickupDate)} ${windowLabel(terms.pickupWindowStart, terms.pickupWindowEnd)}`));
+    info.appendChild(line('Payment', `${PAYMENT_LABEL[terms.paymentMethod]}`));
+    if (terms.note) info.appendChild(line('Note', terms.note));
+    info.appendChild(line('Round', `${revisions.length} · ${t(o.proposedByMe ? 'yours' : 'theirs')}`));
     if (['open', 'countered'].includes(o.status)) info.appendChild(line('Ends', timeLeft(o.expiresAt)));
-    info.appendChild(el('forum-hint', 'Total is an estimate; weight may be measured at handover.'));
+    info.appendChild(el('forum-hint', t('Total is an estimate; weight may be measured at handover.')));
     if (o.onDemoPost && o.proposedByMe && ['open', 'countered'].includes(o.status)) {
-      info.appendChild(el('forum-error-text', 'Demo post: nobody will answer this offer.'));
+      info.appendChild(el('forum-error-text', t('Demo post: nobody will answer this offer.')));
     }
     wrap.appendChild(info);
     const list = el('list');
@@ -126,16 +127,16 @@ function offerActions(ctx, o) {
   const p = ctx.params;
   const acts = [];
   if (o.awaitingMyResponse) {
-    acts.push({ label: 'Accept', run: () => confirm(ctx, {
-      title: 'Accept offer?', note: `${fmtNum(o.terms.quantity)} ${o.terms.unit} will be reserved for this deal.`, yes: 'Yes, accept',
-      run: async (c) => { const r = await act(c, () => marketApi.accept(o.id), 'Accepted.'); if (r) c.router.replace('MarketDeal', { id: r.dealId, notice: 'Deal created. Confirm the terms.' }); },
+    acts.push({ label: t('Accept'), run: () => confirm(ctx, {
+      title: t('Accept offer?'), note: t('{qty} {unit} will be reserved for this deal.', { qty: fmtNum(o.terms.quantity), unit: t(o.terms.unit) }), yes: t('Yes, accept'),
+      run: async (c) => { const r = await act(c, () => marketApi.accept(o.id), t('Accepted.')); if (r) c.router.replace('MarketDeal', { id: r.dealId, notice: t('Deal created. Confirm the terms.') }); },
     }) });
-    acts.push({ label: 'Counter', run: () => ctx.router.push('MarketForm', counterForm(o, (c) => c.router.pop())) });
-    acts.push({ label: 'Decline', run: () => confirm(ctx, { title: 'Decline offer?', yes: 'Yes, decline', run: (c) => act(c, () => marketApi.decline(o.id), 'Declined.') }) });
+    acts.push({ label: t('Counter'), run: () => ctx.router.push('MarketForm', counterForm(o, (c) => c.router.pop())) });
+    acts.push({ label: t('Decline'), run: () => confirm(ctx, { title: t('Decline offer?'), yes: t('Yes, decline'), run: (c) => act(c, () => marketApi.decline(o.id), t('Declined.')) }) });
   } else if (['open', 'countered'].includes(o.status)) {
-    acts.push({ label: 'Withdraw', run: () => confirm(ctx, { title: 'Withdraw offer?', yes: 'Yes, withdraw', run: (c) => act(c, () => marketApi.withdraw(o.id), 'Withdrawn.') }) });
+    acts.push({ label: t('Withdraw'), run: () => confirm(ctx, { title: t('Withdraw offer?'), yes: t('Yes, withdraw'), run: (c) => act(c, () => marketApi.withdraw(o.id), t('Withdrawn.')) }) });
   }
-  if (o.dealId) acts.push({ label: 'Open deal', run: () => ctx.router.push('MarketDeal', { id: o.dealId }) });
+  if (o.dealId) acts.push({ label: t('Open deal'), run: () => ctx.router.push('MarketDeal', { id: o.dealId }) });
   return acts;
 }
 
@@ -144,9 +145,9 @@ export const MarketDeals = listScreen({
   name: 'MarketDeals',
   title: 'My deals',
   fetch: () => marketApi.deals(),
-  emptyText: 'No deals yet. A deal appears once an offer is accepted.',
-  item: (d) => card(d.id, `${d.crop.name} · ${fmtNum(d.terms.quantity)} ${d.terms.unit}`,
-    `${d.role === 'buyer' ? 'Buying from' : 'Selling to'} ${d.counterparty.displayName}`, DEAL_STATUS[d.status]),
+  emptyText: t('No deals yet. A deal appears once an offer is accepted.'),
+  item: (d) => card(d.id, `${t(d.crop.name)} · ${fmtNum(d.terms.quantity)} ${t(d.terms.unit)}`,
+    `${t(d.role === 'buyer' ? 'Buying from' : 'Selling to')} ${d.counterparty.displayName}`, DEAL_STATUS[d.status]),
 });
 
 export const MarketDeal = {
@@ -158,34 +159,34 @@ export const MarketDeal = {
     ctx.root.classList.add('forum-scroll');
     const p = ctx.params;
     const wrap = el('forum-screen');
-    if (p.busy) { wrap.appendChild(loadingView('Working…')); return wrap; }
+    if (p.busy) { wrap.appendChild(loadingView(t('Working…'))); return wrap; }
     const status = stateView(ctx, () => marketApi.deal(p.id));
     if (status) { wrap.appendChild(status); return wrap; }
     const d = p.state.data.item;
     p.actions = dealActions(ctx, d);
     if (p.notice) wrap.appendChild(el('forum-flash', p.notice));
-    const t = d.terms;
+    const terms = d.terms;
     const info = el('forum-profile-card');
-    info.appendChild(el('forum-title forum-title--full', `${d.crop.name} · ${DEAL_STATUS[d.status]}`));
+    info.appendChild(el('forum-title forum-title--full', `${t(d.crop.name)} · ${DEAL_STATUS[d.status]}`));
     info.appendChild(line(d.role === 'buyer' ? 'Seller' : 'Buyer', d.counterparty.displayName));
     for (const ev of evidenceLines(d.counterparty.evidence)) info.appendChild(ev);
-    info.appendChild(line('Quantity', `${fmtNum(t.quantity)} ${t.unit}`));
-    info.appendChild(line('Price', perUnit(t.unitPrice, t.currency, t.unit)));
-    info.appendChild(line('Est. total', money(t.estimatedTotal, t.currency)));
-    info.appendChild(line('Payment', PAYMENT_LABEL[t.paymentMethod] || '—'));
+    info.appendChild(line('Quantity', `${fmtNum(terms.quantity)} ${t(terms.unit)}`));
+    info.appendChild(line('Price', perUnit(terms.unitPrice, terms.currency, t(terms.unit))));
+    info.appendChild(line('Est. total', money(terms.estimatedTotal, terms.currency)));
+    info.appendChild(line('Payment', PAYMENT_LABEL[terms.paymentMethod] || '—'));
     info.appendChild(line('Pickup', `${dateLabel(d.pickup.date)} ${windowLabel(d.pickup.windowStart, d.pickup.windowEnd)}`));
     if (d.pickup.location) info.appendChild(line('Place', d.pickup.location));
-    if (d.status === 'awaiting_confirmation') info.appendChild(line('Confirmed', `You ${d.confirmedByMe ? '✓' : '—'}  Them ${d.confirmedByOther ? '✓' : '—'}`));
-    if (d.paymentStatus) info.appendChild(line('Payment', { pending: 'Pending', received: 'Received', not_applicable: 'Not applicable' }[d.paymentStatus]));
+    if (d.status === 'awaiting_confirmation') info.appendChild(line('Confirmed', `${t('You')} ${d.confirmedByMe ? '✓' : '—'}  ${t('Them')} ${d.confirmedByOther ? '✓' : '—'}`));
+    if (d.paymentStatus) info.appendChild(line('Payment', { pending: t('Pending'), received: t('Received'), not_applicable: t('Not applicable') }[d.paymentStatus]));
     if (d.cancelReason) info.appendChild(line('Cancelled', d.cancelReason));
     wrap.appendChild(info);
     if (d.status === 'handed_over') {
-      const wait = d.role === 'buyer' ? (d.buyerReceived ? 'Waiting for the seller to record payment.' : '') : (d.buyerReceived ? '' : 'Waiting for the buyer to mark goods received.');
+      const wait = d.role === 'buyer' ? (d.buyerReceived ? t('Waiting for the seller to record payment.') : '') : (d.buyerReceived ? '' : t('Waiting for the buyer to mark goods received.'));
       if (wait) wrap.appendChild(el('forum-hint', wait));
     }
     if (d.pickupCode) {
       const code = el('market-code');
-      code.appendChild(el('forum-hint', 'Pickup code — show to the seller at handover'));
+      code.appendChild(el('forum-hint', t('Pickup code — show to the seller at handover')));
       code.appendChild(el('big', [...d.pickupCode].join(' ')));
       wrap.appendChild(code);
     }
@@ -209,39 +210,39 @@ export const MarketDeal = {
 function dealActions(ctx, d) {
   const acts = [];
   const post = (action, body, ok) => (c) => act(c, () => marketApi.dealAction(d.id, action, body), ok);
-  const cancel = { label: 'Cancel deal', run: () => ctx.router.push('MarketReason', { title: 'Why cancel?', onPick: (reason, c) => { ctx.params.pending = post('cancel', { reason }, 'Cancelled.'); c.router.pop(); } }) };
+  const cancel = { label: t('Cancel deal'), run: () => ctx.router.push('MarketReason', { title: 'Why cancel?', onPick: (reason, c) => { ctx.params.pending = post('cancel', { reason }, t('Cancelled.')); c.router.pop(); } }) };
   const schedule = (label) => ({ label, run: () => ctx.router.push('MarketForm', scheduleForm(d, (c) => c.router.pop())) });
   switch (d.status) {
     case 'awaiting_confirmation':
-      if (!d.confirmedByMe) acts.push({ label: 'Confirm terms', run: () => confirm(ctx, { title: 'Confirm these terms?', note: 'Both sides must confirm. This is a record of what you agreed, not a payment.', yes: 'Yes, confirm', run: post('confirm', {}, 'Confirmed.') }) });
+      if (!d.confirmedByMe) acts.push({ label: t('Confirm terms'), run: () => confirm(ctx, { title: t('Confirm these terms?'), note: t('Both sides must confirm. This is a record of what you agreed, not a payment.'), yes: t('Yes, confirm'), run: post('confirm', {}, t('Confirmed.')) }) });
       acts.push(cancel);
       break;
     case 'agreed':
-      acts.push(schedule('Set pickup'), cancel);
+      acts.push(schedule(t('Set pickup')), cancel);
       break;
     case 'pickup_scheduled':
       if (d.role === 'seller') {
-        acts.push({ label: 'Enter pickup code', run: () => ctx.router.push('MarketNumber', {
+        acts.push({ label: t('Enter pickup code'), run: () => ctx.router.push('MarketNumber', {
           title: 'Pickup code', decimals: 0, maxLen: 4, exactLength: 4,
-          onDone: (code, c) => { ctx.params.pending = post('verify-pickup', { code }, 'Handover confirmed.'); c.router.pop(); },
+          onDone: (code, c) => { ctx.params.pending = post('verify-pickup', { code }, t('Handover confirmed.')); c.router.pop(); },
         }) });
       }
-      acts.push(schedule('Change pickup'), cancel);
+      acts.push(schedule(t('Change pickup')), cancel);
       break;
     case 'handed_over':
-      if (d.role === 'buyer' && !d.buyerReceived) acts.push({ label: 'Mark goods received', run: () => confirm(ctx, { title: 'Goods received?', yes: 'Yes, received', run: post('received', {}, 'Marked received.') }) });
+      if (d.role === 'buyer' && !d.buyerReceived) acts.push({ label: t('Mark goods received'), run: () => confirm(ctx, { title: t('Goods received?'), yes: t('Yes, received'), run: post('received', {}, t('Marked received.')) }) });
       if (d.role === 'seller') {
-        acts.push({ label: 'Record payment', run: () => ctx.router.push('ForumPicker', {
-          title: 'Payment', note: 'Only records what happened. AgriLink moves no money.',
-          options: [{ label: 'Paid — received', value: 'received' }, { label: 'Not paid yet', value: 'pending' }, { label: 'No payment needed', value: 'not_applicable' }],
-          onPick(o, c) { ctx.params.pending = post('payment-status', { status: o.value }, 'Payment recorded.'); c.router.pop(); },
+        acts.push({ label: t('Record payment'), run: () => ctx.router.push('ForumPicker', {
+          title: 'Payment', note: t('Only records what happened. AgriLink moves no money.'),
+          options: [{ label: t('Paid — received'), value: 'received' }, { label: t('Not paid yet'), value: 'pending' }, { label: t('No payment needed'), value: 'not_applicable' }],
+          onPick(o, c) { ctx.params.pending = post('payment-status', { status: o.value }, t('Payment recorded.')); c.router.pop(); },
         }) });
       }
       break;
     case 'completed':
-      if (!d.ratedByMe) acts.push({ label: 'Rate this trade', run: () => ctx.router.push('ForumPicker', {
+      if (!d.ratedByMe) acts.push({ label: t('Rate this trade'), run: () => ctx.router.push('ForumPicker', {
         title: 'Rate', options: [5, 4, 3, 2, 1].map((n) => ({ label: `${'★'.repeat(n)}${'☆'.repeat(5 - n)}`, value: n })),
-        onPick(o, c) { ctx.params.pending = post('rating', { stars: o.value }, 'Thanks for rating.'); c.router.pop(); },
+        onPick(o, c) { ctx.params.pending = post('rating', { stars: o.value }, t('Thanks for rating.')); c.router.pop(); },
       }) });
       break;
     default:

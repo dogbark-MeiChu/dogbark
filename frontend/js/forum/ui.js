@@ -1,8 +1,9 @@
+import { t } from '../i18n/index.js';
 import { el } from '../dom.js';
 import { errorText } from './forumUtils.js';
 
 // Shared building blocks so every async screen has loading / empty / error+retry.
-export const loadingView = (text = 'Loading…') => el('forum-empty forum-loading', text);
+export const loadingView = (text = t('Loading…')) => el('forum-empty forum-loading', text);
 
 export function emptyView(text, hint) {
   const d = el('forum-empty');
@@ -12,7 +13,7 @@ export function emptyView(text, hint) {
 }
 
 /** Focusable retry row: the screen's onEnter checks `dataset.act === 'retry'`. */
-export function errorView(err, { action = 'Retry' } = {}) {
+export function errorView(err, { action = t('Retry') } = {}) {
   const d = el('forum-error');
   d.appendChild(el('forum-error-text', errorText(err)));
   const row = el('item forum-retry', `↻ ${action}`);

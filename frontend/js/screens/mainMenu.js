@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 const ITEMS = [
   { label: 'Market Prices', to: 'MarketPrices' },
   { label: 'Sell / Buy', to: 'MarketHome' },
@@ -19,13 +20,13 @@ export default {
     ITEMS.forEach((it, i) => {
       const row = document.createElement('div');
       row.className = 'item';
-      row.textContent = `${i + 1}  ${it.label}`;
+      row.textContent = `${i + 1}  ${t(it.label)}`;
       list.appendChild(row);
     });
     return list;
   },
   onEnter(_el, ctx, i) {
     const it = ITEMS[i];
-    ctx.router.push(it.to, { title: it.label });
+    ctx.router.push(it.to, { title: t(it.label) });
   },
 };

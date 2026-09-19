@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import { el, isCompact } from '../dom.js';
 import { MultiTap, suggest, WINDOW_MS } from '../t9.js';
 import { composer, ask, MAX_TEXT } from '../askAI.js';
@@ -35,10 +36,10 @@ function paint(ctx, { cycling = false } = {}) {
   suggestions = full.trim() && fuIndex === -1 ? suggest(full) : fu;
   suggestionIndex = fuIndex;
   nodes.hint.textContent = fuIndex !== -1
-    ? `Send to ask · ▲▼ other (${fuIndex + 1}/${fu.length})`
+    ? t('Send to ask · ▲▼ other ({i}/{n})', { i: fuIndex + 1, n: fu.length })
     : suggestions.length
-    ? `▲▼ ${suggestions.length} suggestion${suggestions.length > 1 ? 's' : ''}`
-    : (isCompact() ? '##=send *=del' : '# # send · * delete · 0 space');
+    ? t(suggestions.length > 1 ? '▲▼ {n} suggestions' : '▲▼ {n} suggestion', { n: suggestions.length })
+    : t(isCompact() ? '##=send *=del' : '# # send · * delete · 0 space');
 }
 
 function scheduleCommit(ctx) {
@@ -54,7 +55,7 @@ function cycleSuggestion(ctx, dir) {
   const text = suggestionIndex === -1 ? draftBeforeSuggestion : suggestions[suggestionIndex];
   mt.set(text);
   paint(ctx, { cycling: true });
-  nodes.hint.textContent = suggestionIndex === -1 ? 'Your text' : `Suggestion ${suggestionIndex + 1}/${suggestions.length}`;
+  nodes.hint.textContent = suggestionIndex === -1 ? t('Your text') : t('Suggestion {i}/{n}', { i: suggestionIndex + 1, n: suggestions.length });
 }
 
 function submit(ctx) {
@@ -62,7 +63,7 @@ function submit(ctx) {
   paint(ctx);
   const text = mt.value.trim();
   if (!text && !composer.image && !composer.audio) {
-    nodes.hint.textContent = 'Type a question first';
+    nodes.hint.textContent = t('Type a question first');
     nodes.box.classList.add('shake');
     setTimeout(() => nodes?.box.classList.remove('shake'), 300);
     return;
@@ -109,7 +110,7 @@ export default {
     const committed = el('', null, 'span');
     const pending = el('ai-pending', null, 'span');
     const caret = el('ai-caret', null, 'span');
-    const placeholder = el('ai-placeholder', ctx.params?.followUp ? 'Ask a follow-up…' : 'Type your question…', 'span');
+    const placeholder = el('ai-placeholder', t(ctx.params?.followUp ? 'Ask a follow-up…' : 'Type your question…'), 'span');
     box.append(placeholder, committed, pending, caret);
 
     const meta = el('ai-input-meta');
@@ -121,7 +122,7 @@ export default {
     wrap.append(box, meta, hint);
 
     if (!isCompact()) {
-      wrap.appendChild(el('ai-privacy', 'Photo/voice is sent to AI for this answer.'));
+      wrap.appendChild(el('ai-privacy', t('Photo/voice is sent to AI for this answer.')));
     }
 
     nodes = { box, committed, pending, placeholder, attachment, count, hint };

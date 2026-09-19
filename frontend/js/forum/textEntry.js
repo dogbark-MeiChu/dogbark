@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import { el } from '../dom.js';
 import { MultiTap, WINDOW_MS } from '../t9.js';
 import { autoCap } from './forumUtils.js';
@@ -23,7 +24,7 @@ export function createTextEntry({ max, min = 0, multiline = false, cap = 'senten
     nodes.pending.textContent = full.slice(committed.length);
     nodes.placeholder.hidden = full.length > 0;
     const left = max - mt.value.length;
-    nodes.count.textContent = min && mt.value.trim().length < min ? `min ${min} · ${left} left` : `${left} left`;
+    nodes.count.textContent = min && mt.value.trim().length < min ? t('min {min} · {left} left', { min, left }) : t('{left} left', { left });
   }
   const scheduleCommit = () => { clearTimeout(timer); timer = setTimeout(() => { mt.commit(); paint(); }, WINDOW_MS); };
 
@@ -40,7 +41,7 @@ export function createTextEntry({ max, min = 0, multiline = false, cap = 'senten
       const placeholderEl = el('forum-placeholder', placeholder, 'span');
       box.append(placeholderEl, committed, pending, caret);
       const count = el('forum-count');
-      const hint = el('forum-hint', multiline ? '▶ new paragraph · * delete · # # done' : '* delete · # # done');
+      const hint = el('forum-hint', t(multiline ? '▶ new paragraph · * delete · # # done' : '* delete · # # done'));
       nodes = { box, committed, pending, placeholder: placeholderEl, count, hint };
       const wrap = el('forum-entry');
       wrap.append(box, count, hint);

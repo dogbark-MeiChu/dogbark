@@ -1,20 +1,21 @@
 import { getJSON } from '../api.js';
 import { user } from '../state.js';
+import { t } from '../i18n/index.js';
 
 // WMO weather_code -> [emoji, text label]. Text label is the fallback if the
 // handset font lacks emoji glyphs.
-function wmo(code) {
-  if (code === 0) return ['☀️', 'Clear'];
-  if (code <= 3) return ['⛅', 'Cloudy'];
-  if (code === 45 || code === 48) return ['🌫️', 'Fog'];
-  if (code >= 51 && code <= 67) return ['🌧️', 'Rain'];
-  if (code >= 71 && code <= 77) return ['❄️', 'Snow'];
-  if (code >= 80 && code <= 82) return ['🌦️', 'Showers'];
-  if (code >= 95) return ['⛈️', 'Storm'];
-  return ['☁️', 'Cloud'];
+export function wmo(code) {
+  if (code === 0) return ['☀️', t('Clear')];
+  if (code <= 3) return ['⛅', t('Cloudy')];
+  if (code === 45 || code === 48) return ['🌫️', t('Fog')];
+  if (code >= 51 && code <= 67) return ['🌧️', t('Rain')];
+  if (code >= 71 && code <= 77) return ['❄️', t('Snow')];
+  if (code >= 80 && code <= 82) return ['🌦️', t('Showers')];
+  if (code >= 95) return ['⛈️', t('Storm')];
+  return ['☁️', t('Cloud')];
 }
-const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const dayName = (iso, i) => (i === 0 ? 'Today' : DAY[new Date(iso + 'T00:00:00').getDay()]);
+const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => t(d));
+const dayName = (iso, i) => (i === 0 ? t('Today') : DAY[new Date(iso + 'T00:00:00').getDay()]);
 
 let data = null;
 let error = null;
@@ -35,7 +36,7 @@ async function load(ctx) {
     const { lat, lng } = user.location;
     data = await getJSON(`/api/weather?lat=${lat}&lng=${lng}`);
   } catch {
-    error = 'Weather unavailable';
+    error = t('Weather unavailable');
   }
   loading = false;
   ctx.rerender();
@@ -48,21 +49,21 @@ export default {
   onShow(ctx) { if (!data && !loading && !tried) load(ctx); },
   render() {
     const wrap = el('list');
-    if (loading && !data) return el('msg', 'Loading…');
-    if (!data) return el('msg', error || 'Loading…');
+    if (loading && !data) return el('msg', t('Loading…'));
+    if (!data) return el('msg', error || t('Loading…'));
 
-    const t = data.daily[0];
+    const today = data.daily[0];
     const [icon, label] = wmo(data.current.code);
     const head = el('', null);
     head.style.padding = 'var(--pad)';
     head.append(
-      el('', `📍 ${user.location.name}  * ▸`),
+      el('', `📍 ${t(user.location.name)}  * ▸`),
       el('big', `${data.current.temp}°C`),
-      el('', `${icon} ${label} · Rain ${t.rain_prob}%`),
+      el('', `${icon} ${label} · ${t('Rain')} ${today.rain_prob}%`),
     );
     wrap.appendChild(head);
 
-    data.daily.forEach((d, i) => {
+    data.daily.slice(0, 3).forEach((d, i) => { // the API returns a week for Today's Farm
       const [ic, lb] = wmo(d.code);
       const row = el('item');
       row.append(
@@ -76,11 +77,11 @@ export default {
 
     const d = data.daily[this._sel ?? 0];
     if (detail) {
-      wrap.appendChild(el('msg', `Rain ${d.rain_mm}mm · ET0 ${d.et0}mm · ${d.tmin}-${d.tmax}°C`));
+      wrap.appendChild(el('msg', `${t('Rain')} ${d.rain_mm}mm · ET0 ${d.et0}mm · ${d.tmin}-${d.tmax}°C`));
     } else {
-      wrap.appendChild(el('msg', `${data.advice.action.toUpperCase()}: ${data.advice.reason}`));
+      wrap.appendChild(el('msg', `${t(data.advice.action.toUpperCase())}: ${t(data.advice.reason)}`));
     }
-    if (data.stale) wrap.appendChild(el('msg hide-small', 'Offline data'));
+    if (data.stale) wrap.appendChild(el('msg hide-small', t('Offline data')));
     return wrap;
   },
   onKey(action, ctx) {

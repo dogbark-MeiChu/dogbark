@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import { el } from '../dom.js';
 import { forumApi } from '../forum/forumApi.js';
 import { auth, forum, resumeIntent } from '../forum/forumState.js';
@@ -12,11 +13,11 @@ const STATUSES = [null, 'open', 'solved'];
 // straight to a row. At 128x160 this screen holds all filtering.
 function rows() {
   const list = [
-    ['Community', communityName(forum.community) || 'All', 'community'],
-    ['Tag', forum.tag ? tagLabel(forum.tag) : 'All', 'tag'],
+    ['Community', communityName(forum.community) || t('All'), 'community'],
+    ['Tag', forum.tag ? tagLabel(forum.tag) : t('All'), 'tag'],
     ['Location', SCOPE_LABEL[forum.scope], 'scope'],
-    ['Type', forum.type ? TYPE_LABEL[forum.type] : 'All', 'type'],
-    ['Status', forum.status ? (forum.status === 'open' ? 'Open' : 'Solved') : 'All', 'status'],
+    ['Type', forum.type ? TYPE_LABEL[forum.type] : t('All'), 'type'],
+    ['Status', forum.status ? (forum.status === 'open' ? t('Open (status)') : t('Solved')) : t('All'), 'status'],
   ];
   if (!auth.authenticated) list.push(['Browse region', forum.browseRegion, 'region']);
   list.push(['Clear filters', '', 'clear']);
@@ -38,7 +39,7 @@ export default {
       const row = el('item forum-choice');
       row.dataset.key = key;
       row.appendChild(el('forum-choice-n', String(i + 1), 'span'));
-      row.appendChild(el('forum-choice-label', label, 'span'));
+      row.appendChild(el('forum-choice-label', t(label), 'span'));
       if (value) row.appendChild(el('forum-choice-value', value, 'span'));
       list.appendChild(row);
     });
@@ -64,13 +65,13 @@ function choose(ctx, i) {
     case 'community':
       return ctx.router.push('CommunityList', {
         title: 'Community', selected: forum.community,
-        options: [{ label: 'All communities', value: null }, ...COMMUNITIES.map((c) => ({ label: c.name, value: c.slug }))],
+        options: [{ label: t('All communities'), value: null }, ...COMMUNITIES.map((c) => ({ label: c.name, value: c.slug }))],
         onPick(o) { forum.community = o.value; forum.focusedPostId = null; back(); },
       });
     case 'tag':
       return forumApi.tags(forum.community).then((r) => ctx.router.push('ForumPicker', {
         title: 'Tag', selected: forum.tag,
-        options: [{ label: 'All tags', value: null }, ...r.items.map((t) => ({ label: tagLabel(t.slug), value: t.slug }))],
+        options: [{ label: t('All tags'), value: null }, ...r.items.map((tag) => ({ label: tagLabel(tag.slug), value: tag.slug }))],
         onPick(o) { forum.tag = o.value; forum.focusedPostId = null; back(); },
       })).catch(() => { /* stays on options; user can retry */ });
     case 'scope': forum.scope = cycle(SCOPES, forum.scope); return changed(ctx, i);
@@ -79,7 +80,7 @@ function choose(ctx, i) {
     case 'region':
       return forumApi.regions().then((m) => ctx.router.push('ForumPicker', {
         title: 'Browse region', selected: forum.browseRegion,
-        note: 'Sign in to use your own region.',
+        note: t('Sign in to use your own region.'),
         options: m.items.slice(0, 9).map((r) => ({ label: r.name, value: r.code })),
         onPick(o) { forum.browseRegion = o.value; forum.cachedFeeds.clear(); back(); },
       })).catch(() => {});
