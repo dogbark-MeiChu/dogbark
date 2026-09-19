@@ -4,7 +4,7 @@ import { emptyView, loadingView } from '../forum/ui.js';
 import { marketApi } from './marketApi.js';
 import { counterForm, scheduleForm } from './marketForms.js';
 import {
-  DEAL_STATUS, OFFER_STATUS, PAYMENT_LABEL, confirm, dateLabel, fmtNum, handleAuth, isRetry, line, marketError, money, perUnit, relTime, timeLeft, row,
+  DEAL_STATUS, OFFER_STATUS, PAYMENT_LABEL, appendEvidence, confirm, dateLabel, fmtNum, handleAuth, isRetry, line, marketError, money, perUnit, relTime, timeLeft, row,
   runPending, stateView, windowLabel, refreshScreen,
 } from './marketUtils.js';
 
@@ -93,6 +93,7 @@ export const MarketOffer = {
     const info = el('forum-profile-card');
     info.appendChild(el('forum-title forum-title--full', `${t(o.crop.name)} · ${OFFER_STATUS[o.status]}`));
     info.appendChild(line('With', o.counterparty.displayName));
+    appendEvidence(info, o.counterpartyEvidence);
     info.appendChild(line('Quantity', `${fmtNum(terms.quantity)} ${t(terms.unit)}`));
     info.appendChild(line('Price', perUnit(terms.unitPrice, terms.currency, t(terms.unit))));
     info.appendChild(line('Est. total', money(terms.estimatedTotal, terms.currency)));
@@ -168,6 +169,7 @@ export const MarketDeal = {
     const info = el('forum-profile-card');
     info.appendChild(el('forum-title forum-title--full', `${t(d.crop.name)} · ${DEAL_STATUS[d.status]}`));
     info.appendChild(line(d.role === 'buyer' ? 'Seller' : 'Buyer', d.counterparty.displayName));
+    appendEvidence(info, d.counterpartyEvidence);
     info.appendChild(line('Quantity', `${fmtNum(terms.quantity)} ${t(terms.unit)}`));
     info.appendChild(line('Price', perUnit(terms.unitPrice, terms.currency, t(terms.unit))));
     info.appendChild(line('Est. total', money(terms.estimatedTotal, terms.currency)));

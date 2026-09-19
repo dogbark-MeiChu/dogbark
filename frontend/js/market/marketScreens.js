@@ -5,7 +5,7 @@ import { emptyView } from '../forum/ui.js';
 import { marketApi } from './marketApi.js';
 import { ensureOptions, listingForm, requestForm, offerForm } from './marketForms.js';
 import {
-  GRADE_LABEL, FULFILL_LABEL, PRICING_LABEL, confirm, dateLabel, fmtNum, handleAuth, isRetry, line, load, marketError, money, perUnit,
+  GRADE_LABEL, FULFILL_LABEL, PRICING_LABEL, appendEvidence, confirm, dateLabel, fmtNum, handleAuth, isRetry, line, load, marketError, money, perUnit,
   relTime, timeLeft, row, runPending, stateView, refreshScreen,
 } from './marketUtils.js';
 
@@ -193,6 +193,7 @@ export const MarketDetail = {
     info.appendChild(line('Handover', FULFILL_LABEL[it.fulfillment]));
     info.appendChild(line('Area', `${it.location.label}${distance(it)}`));
     info.appendChild(line(it.type === 'selling' ? 'Seller' : 'Buyer', it.owner.displayName));
+    appendEvidence(info, it.ownerEvidence);
     info.appendChild(line('Expires', timeLeft(it.expiresAt)));
     info.appendChild(el('forum-hint', t('Asking prices are not verified. Payment happens outside AgriLink.')));
     if (it.isDemo && !it.isMine) info.appendChild(el('forum-error-text', t('Demo post: nobody answers offers here. Use a second phone to try a real trade.')));

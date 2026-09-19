@@ -47,6 +47,7 @@ test('getNetProfit rejects unknown market', async () => {
   assert.equal(await svc.getNetProfit({ crop: 'rice', region: 'IN-UP-01', from: 'rampur', to: 'nowhere', qty: 1 }), null);
   const n = await svc.getNetProfit({ crop: 'rice', region: 'IN-UP-01', from: 'rampur', to: 'bareilly', qty: 5 });
   assert.equal(n.qty, 5);
+  assert.equal(n.truePrice.highestNet, null); // sample/C-confidence data is never promoted
 });
 
 test('distanceKm is ~0 for same point', () => {
@@ -98,6 +99,7 @@ test('net profit without market coordinates reports unknown transport, not a fre
   assert.equal(n.distance_km, null);
   assert.equal(n.transport_per_qt, null);
   assert.equal(n.gain_per_qt, 10); // before transport
+  assert.equal(n.truePrice.highestNet, null);
 });
 
 test('net profit uses the "from" market as home and reports each side\'s date', async () => {

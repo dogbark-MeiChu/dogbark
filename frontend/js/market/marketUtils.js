@@ -124,3 +124,23 @@ export const line = (label, value) => {
   d.appendChild(el('market-v', value, 'span'));
   return d;
 };
+
+export function appendEvidence(container, evidence) {
+  if (!evidence) return;
+  const band = evidence.band === 'established' ? t('Established trader')
+    : evidence.band === 'restricted' ? t('Restricted') : t('New member');
+  container.appendChild(line('Trade history', band));
+  if (evidence.completedDeals === 0) {
+    container.appendChild(line('Evidence', t('No completed history yet')));
+  } else {
+    container.appendChild(line('Evidence', t('{deals} deals · {people} traders', {
+      deals: evidence.completedDeals, people: evidence.distinctCounterparties,
+    })));
+    container.appendChild(line('Handovers', String(evidence.verifiedHandovers)));
+  }
+  if (evidence.ratingCount > 0) {
+    container.appendChild(line('Ratings', evidence.averageRating == null
+      ? t('{n} ratings · sample too small', { n: evidence.ratingCount })
+      : `${evidence.averageRating}/5 · ${evidence.ratingCount}`));
+  }
+}

@@ -89,7 +89,7 @@ const KINDS = {
   },
 };
 
-export function createMarketService({ pool, limiter, env = process.env, config = {} }) {
+export function createMarketService({ pool, limiter, env = process.env, config = {}, reputation = null }) {
   const cfg = { listingsPerHour: 10, offersPerHour: 30, reportsPerDay: 10, ...config };
   const codeSecret = env.MARKET_CODE_SECRET || env.AUTH_LOOKUP_SECRET;
   if (!codeSecret || codeSecret.length < 32) throw new Error('MARKET_CODE_SECRET (or AUTH_LOOKUP_SECRET) must be at least 32 characters.');
@@ -225,6 +225,7 @@ export function createMarketService({ pool, limiter, env = process.env, config =
     if (!row || (row.status === 'removed' && row[k.owner] !== user.id)) throw notFound(k.label);
     if (row[k.owner] !== user.id && await isBlocked(pool, user.id, row[k.owner])) throw notFound(k.label);
     const out = card(kind, row, user);
+    if (reputation) out.ownerEvidence = await reputation.getForUser(row[k.owner], kind === 'listing' ? 'seller' : 'buyer');
     if (out.isMine) {
       out.openOffers = (await q(
         `SELECT count(*)::int n FROM app.market_offers WHERE ${k.offerCol} = $1 AND status IN ('open','countered')`, [id])).rows[0].n;
@@ -310,7 +311,8 @@ export function createMarketService({ pool, limiter, env = process.env, config =
            COALESCE(l.unit, br.unit) AS unit, c.code AS crop_code, c.name AS crop_name,
            pp.display_name AS proposer_name, rp.display_name AS recipient_name,
            (SELECT d.id FROM app.market_deals d WHERE d.offer_id = o.id) AS deal_id,
-           COALESCE(l.is_demo, br.is_demo, false) AS on_demo_post
+           COALESCE(l.is_demo, br.is_demo, false) AS on_demo_post,
+           COALESCE(l.seller_id, br.buyer_id) AS target_owner_id
     FROM app.market_offers o
     JOIN app.market_offer_revisions rv ON rv.offer_id = o.id AND rv.revision_number = o.current_revision
     LEFT JOIN app.market_listings l ON l.id = o.listing_id
@@ -321,11 +323,14 @@ export function createMarketService({ pool, limiter, env = process.env, config =
 
   function offerView(row, user) {
     const mine = row.proposer_id === user.id;
+    const counterpartyId = mine ? row.recipient_id : row.proposer_id;
+    const ownerRole = row.listing_id ? 'seller' : 'buyer';
+    const counterpartyRole = counterpartyId === row.target_owner_id ? ownerRole : (ownerRole === 'seller' ? 'buyer' : 'seller');
     return {
       id: row.id, status: row.status, revision: row.current_revision, expiresAt: iso(row.expires_at), updatedAt: iso(row.updated_at),
       target: { type: row.listing_id ? 'listing' : 'buy_request', id: row.listing_id || row.buy_request_id },
       crop: { code: row.crop_code, name: row.crop_name },
-      counterparty: { displayName: mine ? row.recipient_name : row.proposer_name },
+      counterparty: { id: counterpartyId, displayName: mine ? row.recipient_name : row.proposer_name, role: counterpartyRole },
       terms: {
         quantity: num(row.rv_quantity), unit: row.unit, unitPrice: num(row.rv_unit_price), currency: row.rv_currency,
         estimatedTotal: num(row.rv_total), pickupDate: row.rv_pickup_date,
@@ -519,8 +524,10 @@ export function createMarketService({ pool, limiter, env = process.env, config =
     const revisions = (await q(
       `SELECT revision_number, proposed_by, quantity, unit_price, pickup_date::text AS pickup_date, payment_method, note, created_at
        FROM app.market_offer_revisions WHERE offer_id = $1 ORDER BY revision_number`, [id])).rows;
+    const item = offerView(row, user);
+    if (reputation) item.counterpartyEvidence = await reputation.getForUser(item.counterparty.id, item.counterparty.role);
     return {
-      item: offerView(row, user),
+      item,
       revisions: revisions.map((r) => ({
         revision: r.revision_number, byMe: r.proposed_by === user.id, quantity: num(r.quantity), unitPrice: num(r.unit_price),
         pickupDate: r.pickup_date, paymentMethod: r.payment_method, note: r.note, createdAt: iso(r.created_at),
@@ -542,10 +549,12 @@ export function createMarketService({ pool, limiter, env = process.env, config =
 
   function dealView(row, user) {
     const role = row.buyer_id === user.id ? 'buyer' : 'seller';
+    const counterpartyRole = role === 'buyer' ? 'seller' : 'buyer';
     const out = {
       id: row.id, status: row.status, role,
       crop: { code: row.crop_code, name: row.crop_name },
-      counterparty: { displayName: role === 'buyer' ? row.seller_name : row.buyer_name },
+      counterparty: { id: role === 'buyer' ? row.seller_id : row.buyer_id,
+        displayName: role === 'buyer' ? row.seller_name : row.buyer_name, role: counterpartyRole },
       terms: { quantity: num(row.quantity), unit: row.unit, unitPrice: num(row.unit_price), currency: row.currency_code,
         estimatedTotal: num(row.estimated_total), paymentMethod: row.terms_snapshot?.paymentMethod },
       confirmedByMe: Boolean(role === 'buyer' ? row.buyer_confirmed_at : row.seller_confirmed_at),
@@ -712,7 +721,9 @@ export function createMarketService({ pool, limiter, env = process.env, config =
     id = uuid(id, 'Deal');
     const row = (await q(`${DEAL_SELECT} WHERE d.id = $1 AND (d.buyer_id = $2 OR d.seller_id = $2)`, [id, user.id])).rows[0];
     if (!row) throw notFound('Deal');
-    return { item: dealView(row, user) };
+    const item = dealView(row, user);
+    if (reputation) item.counterpartyEvidence = await reputation.getForUser(item.counterparty.id, item.counterparty.role);
+    return { item };
   }
 
   // ================= safety =================
@@ -794,5 +805,7 @@ export function createMarketService({ pool, limiter, env = process.env, config =
     listOffers, getOffer, counter, accept, decline, withdraw,
     listDeals, getDeal, confirm, schedule, verifyPickup, received, paymentStatus, cancel, rate,
     report, block, sync, expireStale, pickupCode,
+    getReputation: (userId, role) => reputation.getForUser(userId, role),
+    getMyReputation: (user) => reputation.getBoth(user.id),
   };
 }
