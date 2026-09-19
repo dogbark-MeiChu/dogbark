@@ -1,6 +1,7 @@
 import { t } from '../i18n/index.js';
 import { getJSON } from '../api.js';
 import { user, identity } from '../state.js';
+import { pricePlace, pointQuery } from '../place.js';
 import { money, h } from '../fmt.js';
 
 // Prices follow the signed-in member: their region (a district resolves to its state on the
@@ -8,11 +9,9 @@ import { money, h } from '../fmt.js';
 // Without a profile it falls back to the fixed demo region.
 let crops = null, cropsFor = null, ci = 0, data = null, error = null, loading = false, lastIdx = 0;
 
-const region = () => identity.profile?.regionCode || user.region;
-const point = () => {
-  const p = identity.profile;
-  return p?.regionLat != null && p?.regionLng != null ? `&lat=${p.regionLat}&lng=${p.regionLng}` : '';
-};
+let place = null; // pricePlace(): the farm's area, else the profile region
+const region = () => place?.region || identity.profile?.regionCode || user.region;
+const point = () => pointQuery(place);
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m) => t(m));
 function dataDate(value) {
@@ -40,6 +39,7 @@ function orderCrops(items) {
 async function load(ctx) {
   loading = true; error = null;
   try {
+    place = await pricePlace();
     if (cropsFor !== region()) {
       crops = orderCrops((await getJSON(`/api/prices/crops?region=${region()}`)).items);
       cropsFor = region(); ci = 0;
@@ -70,6 +70,8 @@ export default {
   name: 'MarketPrices',
   title: 'Verified Prices',
   softCenter: { label: 'Detail' },
+  // Price alerts for the crop on screen: the cloud watches its mandi price.
+  softLeft: { label: 'Alerts', handler: (ctx) => ctx.router.push('PriceAlerts', crops?.length ? { crop: crops[ci] } : {}) },
   initialFocus: () => lastIdx,
   onShow(ctx) {
     if (cropsFor !== region()) { data = null; error = null; } // another member signed in
@@ -113,6 +115,6 @@ export default {
   onEnter(_el, ctx, i) {
     if (i === 0 || !data) return;
     lastIdx = i;
-    ctx.router.push('PriceDetail', { crop: crops[ci].code, cropLabel: crops[ci].name, market: data.markets[i - 1], home: data.home, region: region() });
+    ctx.router.push('PriceDetail', { crop: crops[ci].code, cropLabel: crops[ci].name, market: data.markets[i - 1], home: data.home, region: region(), place });
   },
 };

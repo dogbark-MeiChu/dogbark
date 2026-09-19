@@ -2,6 +2,7 @@ import { initKeypad } from './keypad.js';
 import { createRouter } from './router.js';
 import mainMenu from './screens/mainMenu.js';
 import home from './screens/home.js';
+import { PriceAlerts } from './screens/priceAlerts.js';
 import weather from './screens/weather.js';
 import marketPrices from './screens/marketPrices.js';
 import priceDetail from './screens/priceDetail.js';
@@ -38,7 +39,7 @@ const farmerCircle = {
 };
 
 const screens = {
-  Home: home, MainMenu: mainMenu, Weather: weather, MarketPrices: marketPrices, PriceDetail: priceDetail, ComingSoon: comingSoon,
+  Home: home, PriceAlerts, MainMenu: mainMenu, Weather: weather, MarketPrices: marketPrices, PriceDetail: priceDetail, ComingSoon: comingSoon,
   AskAIHome: askAIHome, AskAIInput: askAIInput, AskAIThinking: askAIThinking, AskAIAnswer: askAIAnswer,
   AskAISources, AskAIMedia, AskAIPhoto, AskAIVoice, AskAIHistory,
   AuthWelcome, AuthPhone, AuthPin, ProfileName, ProfileVillage, ProfileRegion, AuthResult, Settings, ProfileSummary, LanguageSettings, CropSettings, WelcomeLanguage,

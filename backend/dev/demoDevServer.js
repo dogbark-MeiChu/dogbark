@@ -16,6 +16,7 @@ import { authRouter } from '../routes/auth.js';
 import { createForumRouter } from '../routes/forum.js';
 import { createMarketRouter } from '../routes/market.js';
 import { createFarmOpsRouter } from '../routes/farmOps.js';
+import { createPriceAlertRouter } from '../routes/priceAlerts.js';
 import { pricesRouter } from '../routes/prices.js';
 import weather from '../routes/weather.js';
 import { aiRouter } from '../routes/ai.js';
@@ -58,6 +59,7 @@ app.use('/api/auth', authRouter({ auth, pool }));
 app.use('/api/forum', createForumRouter({ pool, auth }).router);
 app.use('/api/market', createMarketRouter({ pool, auth, env: { AUTH_LOOKUP_SECRET: secret } }).router);
 app.use('/api/farms', createFarmOpsRouter({ pool, auth, farmPriceService, weatherGetter: getWeather }).router);
+app.use('/api/price-alerts', createPriceAlertRouter({ pool, auth, prices }).router);
 app.use('/api/prices', pricesRouter(prices));
 app.use('/api/weather', weather);
 app.use('/api/ai', aiRouter({ auth }));
@@ -65,10 +67,13 @@ app.use('/api/tts', ttsRouter({ auth }));
 app.use(forumErrorHandler);
 app.use(express.static(path.join(here, '..', '..', 'frontend')));
 
+// Live prices first (up to 90 s), so a rehearsal never opens on "No mandi prices for your area".
 if (process.env.MANDI_LIVE !== '0') {
-  syncMandi({ pool, client: createMandiClient({ log: () => {} }), geocode: createGeocoder() })
+  console.log('mandi: syncing live Uttar Pradesh prices…');
+  const sync = syncMandi({ pool, client: createMandiClient({ log: () => {} }), geocode: createGeocoder() })
     .then((r) => console.log(`mandi: ${r.written} live price rows (${r.complete ? 'complete' : 'paused'})`))
     .catch((e) => console.error(`mandi sync failed (the farm shows its seeded prices): ${e.message}`));
+  await Promise.race([sync, new Promise((r) => setTimeout(r, 90_000))]);
 }
 const port = Number(process.env.PORT) || 3103;
 app.listen(port, '127.0.0.1', () => console.log(`AgriLink demo: http://127.0.0.1:${port}  (sign in 9100000001 / 246810)`));
