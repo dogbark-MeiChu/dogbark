@@ -1015,4 +1015,7 @@ export default {
   "{who} added {task}": "{who} {task} যোগ করেছেন",
   "{who} updated {task}": "{who} {task} হালনাগাদ করেছেন",
   "Someone": "কেউ",
+  "Outdoor mode: On": "রোদ মোড: চালু",
+  "Outdoor mode: Off": "রোদ মোড: বন্ধ",
+  "# Read · * Bright": "# শুনুন · * উজ্জ্বল",
 };

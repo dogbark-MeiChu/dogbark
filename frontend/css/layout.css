@@ -43,7 +43,8 @@
 .home-meta { font-size: calc(var(--fs) * .8); line-height: 1.2; color: var(--dim); }
 .home-src { font-size: calc(var(--fs) * .7); color: var(--dim); }
 .home-main, .home-meta { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-.home-hint { margin-left: auto; font-size: calc(var(--fs) * .75); }
+.home-hint { margin-left: auto; font-size: calc(var(--fs) * .7); white-space: nowrap; }
+.home-all .home-main { display: block; white-space: nowrap; }
 .home-warn { border-left-color: #ffb454; }
 .home-warn .home-meta { color: #ffb454; }
 .item.focused .home-n, .item.focused .home-meta, .item.focused .home-src, .item.focused .home-hint { color: #000; }

@@ -2,6 +2,7 @@ import { el } from '../dom.js';
 import { MultiTap } from '../t9.js';
 import { getJSON, postJSON, ApiError } from '../api.js';
 import { identity } from '../state.js';
+import { outdoor, toggleOutdoor } from '../outdoor.js';
 import { t, language, setLanguage, LANGUAGES } from '../i18n/index.js';
 
 const draft = { mode: 'signup', phone: '', pin: '', pinConfirm: '', name: new MultiTap({ max: 60 }), village: new MultiTap({ max: 80 }), regionId: null, language, cropIds: [], cropUserId: null };
@@ -112,8 +113,16 @@ export const AuthResult = {
 
 export const Settings = {
   name: 'Settings', title: 'Settings', numericSelect: true,
-  render() { const root = el('list'); ['My profile', 'Language', 'My crops', 'Sign out other phones', 'Sign out'].forEach((label, i) => root.append(el('item', `${i + 1}  ${t(label)}`))); return root; },
-  onEnter(_el, ctx, i) { if (i === 0) ctx.router.push('ProfileSummary'); else if (i === 1) ctx.router.push('LanguageSettings'); else if (i === 2) ctx.router.push('CropSettings'); else if (i === 3) confirmLogoutOthers(ctx); else logout(ctx); },
+  render() {
+    const root = el('list');
+    ['My profile', 'Language', 'My crops', outdoor ? 'Outdoor mode: On' : 'Outdoor mode: Off', 'Sign out other phones', 'Sign out']
+      .forEach((label, i) => root.append(el('item', `${i + 1}  ${t(label)}`)));
+    return root;
+  },
+  onEnter(_el, ctx, i) {
+    if (i === 0) ctx.router.push('ProfileSummary'); else if (i === 1) ctx.router.push('LanguageSettings'); else if (i === 2) ctx.router.push('CropSettings');
+    else if (i === 3) { toggleOutdoor(); ctx.rerender(); ctx.focus.set(3); } else if (i === 4) confirmLogoutOthers(ctx); else logout(ctx);
+  },
 };
 export const ProfileSummary = {
   name: 'My profile', title: 'My profile',

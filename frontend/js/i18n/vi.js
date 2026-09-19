@@ -1015,4 +1015,7 @@ export default {
   "{who} added {task}": "{who} đã thêm {task}",
   "{who} updated {task}": "{who} đã cập nhật {task}",
   "Someone": "Ai đó",
+  "Outdoor mode: On": "Chế độ ngoài trời: Bật",
+  "Outdoor mode: Off": "Chế độ ngoài trời: Tắt",
+  "# Read · * Bright": "# Đọc · * Sáng",
 };

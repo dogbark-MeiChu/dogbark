@@ -1015,4 +1015,7 @@ export default {
   "{who} added {task}": "{who} ने {task} जोड़ा",
   "{who} updated {task}": "{who} ने {task} बदला",
   "Someone": "कोई",
+  "Outdoor mode: On": "धूप मोड: चालू",
+  "Outdoor mode: Off": "धूप मोड: बंद",
+  "# Read · * Bright": "# सुनें · * चमक",
 };

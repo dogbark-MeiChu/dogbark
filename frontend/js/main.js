@@ -1,3 +1,4 @@
+import './outdoor.js'; // applies outdoor mode before the first screen
 import { initKeypad } from './keypad.js';
 import { createRouter } from './router.js';
 import mainMenu from './screens/mainMenu.js';

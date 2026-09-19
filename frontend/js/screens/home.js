@@ -10,6 +10,7 @@ import * as farmApi from '../farmOps/farmOpsApi.js';
 import { farmToday, selectFarm } from './farmOps.js';
 import { wmo } from './weather.js';
 import { alertsApi, reachedText } from './priceAlerts.js';
+import { toggleOutdoor } from '../outdoor.js';
 
 // Home: the three things a farmer picks up the second phone for, on one screen, each one key away.
 //   1 what the crop is worth today and where it pays most (the price question the app exists for)
@@ -210,7 +211,7 @@ export default {
     list.append(priceRow(), marketRow(), farmRow());
     const all = el('item home-row home-all');
     all.dataset.key = 'all';
-    all.append(el('home-n', '0'), el('home-main', t('All features')), el('home-hint', t('# Read aloud')));
+    all.append(el('home-n', '0'), el('home-main', t('All features')), el('home-hint', t('# Read · * Bright')));
     list.append(all);
     return list;
   },
@@ -218,6 +219,7 @@ export default {
   onKey(action, ctx) {
     if (action === 'NUM_0') { go(ctx, 'all'); return true; }
     if (action === 'NUM_4') return true; // 4 is the "All features" row's position, not its key
+    if (action === 'STAR') { toggleOutdoor(); return true; } // * : outdoor (high contrast) mode, one key away in the field
     return false;
   },
   onEnter(node, ctx) { if (node) go(ctx, node.dataset.key); },

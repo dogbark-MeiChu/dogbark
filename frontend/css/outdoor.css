@@ -1,0 +1,15 @@
+/* Outdoor mode (Settings, or * on Home): pure black, white text, bright yellow focus, white lines.
+   For strong sun on a small screen, where the dim greens of the normal theme wash out.
+   Loaded last; html.outdoor outranks the :root tokens of every feature stylesheet. */
+html.outdoor {
+  --bg: #000; --fg: #fff; --dim: #dcdcdc; --accent: #ffea00; --focus-bg: #ffea00; --focus-fg: #000;
+  --ai-bg: #000; --ai-surface: #000; --ai-surface-2: #1c1c1c; --ai-text: #fff; --ai-dim: #dcdcdc; --ai-line: #fff; --ai-accent: #ffea00;
+  --forum-bg: #000; --forum-surface: #000; --forum-surface-2: #1c1c1c; --forum-text: #fff; --forum-dim: #dcdcdc; --forum-line: #fff; --forum-accent: #ffea00;
+  --ops-surface: #000; --ops-surface-2: #1c1c1c; --ops-dim: #dcdcdc; --ops-line: #fff;
+}
+html.outdoor body { font-weight: 700; }
+html.outdoor #status { background: #000; border-bottom: 2px solid #fff; }
+html.outdoor #softkeys { background: #000; border-top: 2px solid #fff; color: #fff; }
+html.outdoor .item, html.outdoor .entry { border-bottom-color: #fff; }
+html.outdoor .item.focused { outline: 3px solid #fff; outline-offset: -3px; }
+html.outdoor .item.focused, html.outdoor .item.focused * { color: #000 !important; }
