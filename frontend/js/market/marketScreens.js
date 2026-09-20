@@ -17,14 +17,14 @@ const query = () => ({ ...(AREAS.find((a) => a[0] === filters.area)?.[2] || {}),
 
 // ---------------------------------------------------------------- home
 const HOME = [
-  ['Browse Produce', (ctx) => ctx.router.push('MarketFeed', { kind: 'listing' })],
-  ['Buyer Requests', (ctx) => ctx.router.push('MarketFeed', { kind: 'request' })],
-  ['Sell Produce', (ctx) => openForm(ctx, listingForm(afterCreate('listing')))],
-  ['Post Buy Request', (ctx) => openForm(ctx, requestForm(afterCreate('request')))],
-  ['Offers to Answer', (ctx) => ctx.router.push('MarketOffers', { role: 'incoming' })],
-  ['Offers I Sent', (ctx) => ctx.router.push('MarketOffers', { role: 'outgoing' })],
-  ['My Deals', (ctx) => ctx.router.push('MarketDeals', {})],
+  ['Browse produce', (ctx) => ctx.router.push('MarketFeed', { kind: 'listing' })],
+  ['Browse buyer requests', (ctx) => ctx.router.push('MarketFeed', { kind: 'request' })],
+  ['Sell produce', (ctx) => openForm(ctx, listingForm(afterCreate('listing')))],
+  ['Post buy request', (ctx) => openForm(ctx, requestForm(afterCreate('request')))],
+  ['Offers', (ctx) => ctx.router.push('MarketOffers', { role: 'incoming' })],
+  ['Deals', (ctx) => ctx.router.push('MarketDeals', {})],
 ];
+const HOME_SECTIONS = new Map([[0, 'BROWSE'], [2, 'POST'], [4, 'YOUR TRADES']]);
 async function openForm(ctx, form) {
   try { await ensureOptions(); } catch { ctx.params.notice = t('No network. Try again.'); return ctx.rerender(); }
   ctx.router.push('MarketForm', form);
@@ -36,7 +36,7 @@ function badge(ctx) {
   marketApi.offers('incoming').then((r) => {
     const n = r.items.filter((i) => i.awaitingMyResponse).length;
     const target = ctx.root?.querySelectorAll('.item')[4];
-    if (target) target.textContent = `5  ${n ? t('Offers to Answer ({n} new)', { n }) : t('Offers to Answer')}`;
+    if (target) target.textContent = `5  ${n ? t('Offers ({n} waiting)', { n }) : t('Offers')}`;
   }).catch(() => {});
 }
 
@@ -48,6 +48,8 @@ export const MarketHome = {
   render(ctx) {
     const list = el('list');
     HOME.forEach(([label], i) => {
+      const section = HOME_SECTIONS.get(i);
+      if (section) list.appendChild(el('market-menu-section', t(section)));
       const item = el('item', `${i + 1}  ${t(label)}`);
       list.appendChild(item);
     });

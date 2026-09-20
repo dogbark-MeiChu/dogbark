@@ -40,3 +40,4 @@
   .trade-total .big { font-size: 16px; }
   .trade-price, .trade-note { display: none; }
 }
+.market-menu-section{padding:3px var(--pad);background:var(--forum-surface);color:var(--forum-dim);font-size:.7em;letter-spacing:.08em}
