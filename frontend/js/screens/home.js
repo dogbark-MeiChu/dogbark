@@ -48,7 +48,7 @@ function settle(ctx, key, promise) {
 
 async function loadFarm() {
   const { items } = await farmApi.farms();
-  const farm = items[0];
+  const farm = items.find((f) => f.id === farmOps.activeFarmId) || items[0];
   if (!farm) return { farm: null };
   const today = await farmApi.today(farm.id, new URLSearchParams(location.search).get('demoDate') || farmToday(farm.timezone));
   return { farm, today };

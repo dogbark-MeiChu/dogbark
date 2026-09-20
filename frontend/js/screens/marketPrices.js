@@ -102,7 +102,9 @@ export default {
       row.append(h('', label), h('dim', `${money(m.price, data.currency)}/${t('qt')} ${arrow}${when} · ${m.confidence?.grade || 'C'}`));
       wrap.appendChild(row);
     });
-    const locationName = place?.name || identity.profile?.regionName || region();
+    const locationName = place?.farmName
+      ? `${place.farmName} · ${place.name || place.region}`
+      : place?.name || identity.profile?.regionName || region();
     const scope = data.coverage?.state_fallback || cropCoverage?.state_fallback ? t('State coverage') : t('District coverage');
     wrap.appendChild(h('msg dim', `${locationName} · ${scope} · ${data.coverage?.market_count || data.markets.length} ${t('mandis')} · ${crops.length} ${t('crops')}`));
     wrap.appendChild(h('msg dim', data.variety ? `${t('Variety:')} ${data.variety}` : t('Variety not confirmed')));

@@ -12,6 +12,7 @@ import { startTunnel, stopTunnel, tunnelState } from './tunnel.js';
 import { connect, reconnect, describeConnection, disconnect } from './context.js';
 import { snapshot } from './state.js';
 import { actions, actionById } from './actions.js';
+import { resolveSteps } from './runsheet.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -67,6 +68,9 @@ app.get('/api/state', send(async () => {
     actions: actions.map(({ id, group, label, hint, fields, danger, confirm }) => ({ id, group, label, hint, fields, danger, confirm })),
   };
 }));
+
+// The run sheet is the same actions in demo order, with their targets already filled in.
+app.get('/api/runsheet', send(async () => ({ steps: resolveSteps(await snapshot()) })));
 
 app.post('/api/action/:id', send(async (req) => {
   const action = actionById.get(req.params.id);

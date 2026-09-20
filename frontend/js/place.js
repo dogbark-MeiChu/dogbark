@@ -1,5 +1,6 @@
-import { identity, user } from './state.js';
+import { farmOps, identity, user } from './state.js';
 import * as farmApi from './farmOps/farmOpsApi.js';
+import { choosePriceFarm, placeFromFarm } from './pricePlaceModel.js';
 
 // Where prices are for: the member's farm (its region and point, so "your area" is the mandi
 // nearest the farm), else their profile region. Home, Market Prices, Net Profit, the trade
@@ -9,17 +10,27 @@ const TTL = 5 * 60 * 1000;
 
 const fromProfile = () => {
   const p = identity.profile;
-  return { region: p?.regionCode || user.region, lat: p?.regionLat ?? null, lng: p?.regionLng ?? null };
+  const region = p?.regionCode || user.region;
+  return {
+    region,
+    lat: p?.regionLat ?? null,
+    lng: p?.regionLng ?? null,
+    name: p?.regionName || region,
+    basis: 'profile',
+  };
 };
 
 /** { region, lat, lng } — lat/lng may be null. */
 export async function pricePlace() {
-  const key = identity.profile?.id || '';
+  // The farm selected in Today's Farm is also the price location. If no farm has been selected,
+  // use the first farm returned by the server (alphabetical by name) consistently across Home and
+  // Market Prices. Including the active farm in the cache key makes a farm switch take effect now.
+  const key = `${identity.profile?.id || ''}:${farmOps.activeFarmId || ''}`;
   if (cached && cached.key === key && Date.now() - cached.at < TTL) return cached.place;
   let place = fromProfile();
   try {
-    const f = (await farmApi.farms()).items.find((x) => x.region_code);
-    if (f) place = { region: f.region_code, lat: f.latitude ?? null, lng: f.longitude ?? null };
+    const f = choosePriceFarm((await farmApi.farms()).items, farmOps.activeFarmId);
+    if (f) place = placeFromFarm(f);
   } catch { /* no farm, or Today's Farm off: the profile region */ }
   cached = { key, at: Date.now(), place };
   return place;

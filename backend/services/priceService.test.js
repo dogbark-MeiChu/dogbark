@@ -180,3 +180,28 @@ test('with the member\'s location both trips start from the member', () => {
   assert.equal(n.gain_per_qt, 200 - n.transport_per_qt);
   assert.equal(n.gain_total, n.gain_per_qt * 2);
 });
+
+test('TruePrice applies caller-selected transport, channel, packing and transit assumptions', async () => {
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = [];
+  for (let back = 6; back >= 0; back--) {
+    const d = new Date(`${today}T00:00:00Z`); d.setUTCDate(d.getUTCDate() - back);
+    const date = d.toISOString().slice(0, 10);
+    rows.push(
+      { market_code: 'home', market_name: 'Home', lat: 26.85, lng: 80.95, date, modal: 2200, variety: 'Common', currency: 'INR', unit: 'quintal', source: 'agmarknet', sample: false },
+      { market_code: 'away', market_name: 'Away', lat: 26.45, lng: 80.33, date, modal: 2400, variety: 'Common', currency: 'INR', unit: 'quintal', source: 'agmarknet', sample: false },
+    );
+  }
+  const service = createPriceService({ async history() { return rows; }, async crops() { return []; } });
+  const out = await service.getNetProfit({
+    crop: 'rice', region: 'IN-UP', from: 'home', to: 'away', qty: 5, lat: 26.8467, lng: 80.9462,
+    transportMode: 'own', channel: 'direct_buyer', alreadyPacked: true, transitDays: 2,
+  });
+  const option = out.truePrice.options.find((item) => item.marketCode === 'away');
+  assert.deepEqual(option.economics.assumptions, { transportMode: 'own', distanceKm: option.economics.assumptions.distanceKm, transitDays: 2, alreadyPacked: true });
+  assert.equal(option.economics.channel, 'direct_buyer');
+  assert.equal(option.economics.breakdown.commission.perQt, 0);
+  assert.equal(option.economics.breakdown.marketFee.perQt, 0);
+  assert.equal(option.economics.breakdown.packaging.perQt, 0);
+  assert.ok(option.economics.breakdown.spoilage.perQt > 0);
+});
