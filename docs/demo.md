@@ -1,7 +1,7 @@
 # AgriLink Demo Script
 # Team dogbark · MeiChu Hackathon 2026 · CloudMosa Track
 
-> Total demo time: ~5.5 minutes (after a 2-3 min slide presentation)
+> Total demo time: ~4.5 minutes (after a 2-3 min slide presentation)
 > Test account: Phone `0912345678` · PIN `123456`
 > URL: https://203-116-30-130.sslip.io/
 > Second phone (for multi-user sync): use demo account `9100000001` / `246810`
@@ -83,44 +83,7 @@ Press **Back** to return to Home.
 
 ---
 
-### Step 2 - Sim Trade: live buyer offer arrives from the server
-**Time budget: ~30-60 seconds**
-
-> "Now for something that only a cloud-connected platform can show."
-
-The presenter (or a helper off-stage) triggers a simulated trade on the backend server --
-a buyer listing is created and an offer is sent to Rakesh's account programmatically,
-directly against the running server at `203.116.30.130`.
-
-**Phone A stays on the Home screen. Watch row 2.**
-
-Within seconds, row 2 updates without any page refresh:
-
-```
-2  Offers to answer: 1         (was: No offers waiting)
-   Wheat 200 qt · Rs.2,300 · Sim Buyer
-```
-
-A green notification banner slides in at the bottom:
-```
-New offer: Wheat 200 qt from Sim Buyer
-```
-
-> "A buyer just posted an offer -- from the cloud, directly to this phone.
-> The phone never polled manually. This is the outbox sync pattern running
-> every four seconds in the background."
-
-Point to the timestamp on the banner and the updated Home row.
-
-> "Two phones, one server, instant state. This is what the Cloud Phone
-> architecture unlocks on hardware that costs fifteen dollars."
-
-Do NOT navigate into the offer -- it will be handled in Step 4 (trade flow).
-Press **Back** or simply stay on Home.
-
----
-
-### Step 3 - Verified prices: three mandis, net of transport
+### Step 2 - Verified prices: three mandis, net of transport
 **Time budget: ~45 seconds**
 
 Press **1** (row 1: Market Prices).
@@ -148,7 +111,7 @@ Press **Back**, then **Back** to return to Home.
 
 ---
 
-### Step 4 - Accept buyer's offer: trade confirm with TTS readout
+### Step 3 - Accept buyer's offer: trade confirm with TTS readout
 **Time budget: ~75 seconds**
 
 Press **2** (row 2: Offers to answer).
@@ -203,6 +166,19 @@ After TTS finishes, type **0 0** (the last two digits of Rs.12,25,000).
 > a pocket press cannot accidentally commit a half-million rupee trade."
 
 The deal is created. Press **Back** to return.
+
+---
+
+### Step 4 - Sim Trade (Backend Integration)
+**Time budget: ~30-60 seconds**
+
+> "Now, we will demonstrate a live simulated trade. We initiate this trade directly from our backend testing server."
+
+*(Trigger the simulated trade from the backend)*
+
+> "As you can see, the demo phone reacts instantly to the new incoming trade data."
+
+*(Briefly show the UI reaction on the demo phone)*
 
 ---
 

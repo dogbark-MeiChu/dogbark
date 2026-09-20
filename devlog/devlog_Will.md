@@ -103,3 +103,7 @@
   6. Step 5 - 現場取貨碼驗證 (45 秒)：輸入買家的 4 位數 pickup code 完成交貨，全程不掏出智慧型手機。
   7. Step 6 - 遺失手機 10 秒撤銷 (20 秒)：Settings -> Sign out other phones，伺服器即時撤銷所有其他 Session。
 - **功能目的**：提供清晰、可直接執行的評審 Demo 流程，確保 5.5 分鐘內完整展示所有核心功能，並與 2-3 分鐘投影片簡報無縫銜接。
+
+# 2026-09-20 10:25 Updated Demo Script with Sim Trade
+- **What was changed**: Inserted a new step (Step 4) into docs/demo.md to showcase a backend-initiated simulated trade reacting on the demo phone. Renumbered subsequent steps.
+- **Verification**: The 30-60 second backend sim trade block is now properly documented in the flow.
