@@ -80,6 +80,7 @@ export default {
     ctx.root.classList.add('forum-scroll');
     const wrap = el('forum-screen');
     wrap.appendChild(sortTabs(forum.sort));
+    wrap.appendChild(el('forum-filters', t('◄► Sort · # Filter · * My activity')));
     const fl = filterLine();
     if (fl && !isCompact()) wrap.appendChild(el('forum-filters', fl));
     const flash = flashLine(currentFlash());
@@ -131,7 +132,7 @@ export default {
       case 'NUM_0': setCommunity(ctx, null); return true;
       case 'HASH': ctx.router.push('ForumOptions'); return true;
       case 'STAR':
-        if (requireAuth(ctx)) ctx.router.push('SavedPosts');
+        if (requireAuth(ctx)) ctx.router.push('UserProfile');
         return true;
       default:
         if (/^NUM_[1-5]$/.test(action)) { setCommunity(ctx, COMMUNITIES[Number(action[4]) - 1].slug); return true; }
@@ -158,4 +159,3 @@ function openRow(ctx, row) {
   forum.focusedPostId = row.dataset.postId;
   ctx.router.push('PostDetail', { postId: row.dataset.postId });
 }
-

@@ -3,13 +3,13 @@ import { el } from '../dom.js';
 import { auth, currentFlash } from '../forum/forumState.js';
 import { flashLine } from '../forum/ui.js';
 
-// Forum view of the app-wide profile. Name, village, region and sign-out are
-// edited in Settings (identity screens), which the last row opens.
-const ROWS = ['My posts', 'Saved posts', 'Settings'];
+// Personal activity inside Farmer Circle. App-wide profile and account controls
+// stay in the global Settings screen instead of being duplicated here.
+const ROWS = ['My posts', 'Saved posts'];
 
 export default {
   name: 'UserProfile',
-  title: 'Profile',
+  title: 'My activity',
   numericSelect: true,
   softLeft: { label: '', handler() {} },
   softCenter: { label: 'Select', handler: (ctx, _c, i) => choose(ctx, i) },
@@ -42,5 +42,4 @@ export default {
 function choose(ctx, i) {
   if (i === 0) ctx.router.push('MyPosts');
   else if (i === 1) ctx.router.push('SavedPosts');
-  else if (i === 2) ctx.router.push('Settings');
 }

@@ -21,13 +21,12 @@ function rows() {
   ];
   if (!auth.authenticated) list.push(['Browse region', forum.browseRegion, 'region']);
   list.push(['Clear filters', '', 'clear']);
-  list.push([auth.authenticated ? 'Profile' : 'Sign in', '', 'profile']);
   return list;
 }
 
 export default {
   name: 'ForumOptions',
-  title: 'Options',
+  title: 'Filter feed',
   numericSelect: true,
   softLeft: { label: '', handler() {} },
   softCenter: { label: 'Change', handler: (ctx, cur, i) => choose(ctx, i) },
@@ -87,9 +86,6 @@ function choose(ctx, i) {
     case 'clear':
       Object.assign(forum, { community: null, tag: null, scope: 'global', type: null, status: null, focusedPostId: null });
       return changed(ctx, i);
-    case 'profile':
-      if (auth.authenticated) return ctx.router.push('UserProfile');
-      return ctx.router.push('AuthGate');
     default:
   }
 }
