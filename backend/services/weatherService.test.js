@@ -50,7 +50,8 @@ test('caches, and serves stale data when upstream fails', async () => {
   const bad = async () => { throw new Error('down'); };
   const now = () => t;
 
-  await getWeather(24.14, 120.67, { fetchImpl: ok, now });
+  const first = await getWeather(24.14, 120.67, { fetchImpl: ok, now });
+  assert.equal(first.daily[0].advice.action, 'caution');
   await getWeather(24.14, 120.67, { fetchImpl: ok, now });
   assert.equal(calls, 1);
 
