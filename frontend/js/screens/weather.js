@@ -22,7 +22,7 @@ let data = null;
 let error = null;
 let loading = false;
 let tried = false;
-let detail = false;
+let selectedDay = 0;
 
 function el(cls, text) {
   const d = document.createElement('div');
@@ -46,7 +46,7 @@ async function load(ctx) {
 export default {
   name: 'Weather',
   title: 'Weather',
-  softCenter: { label: 'Detail' },
+  softCenter: { label: '' },
   onShow(ctx) { if (!data && !loading && !tried) load(ctx); },
   render() {
     const wrap = el('list');
@@ -66,25 +66,29 @@ export default {
 
     data.daily.slice(0, 7).forEach((d, i) => {
       const [ic, lb] = wmo(d.code);
-      const row = el('item');
+      const row = el('item weather-day');
       row.append(
         el('', dayName(d.date, i)),
         el('', `${ic} ${lb}`),
         el('dim hide-small', `${d.tmin}-${d.tmax}° ${d.rain_prob}%`),
       );
+      if (i === selectedDay) {
+        const detail = [
+          `${t('Rain')} ${d.rain_mm}mm (${d.rain_prob}%)`,
+          d.wind_max == null ? null : `Wind ${Math.round(d.wind_max)} km/h`,
+          `ET0 ${d.et0}mm`,
+          `${d.tmin}-${d.tmax}°C`,
+        ].filter(Boolean).join(' · ');
+        row.appendChild(el('weather-day-detail', detail));
+      }
       row.dataset.i = i;
       wrap.appendChild(row);
     });
 
-    const d = data.daily[this._sel ?? 0];
-    if (detail) {
-      wrap.appendChild(el('msg', `${t('Rain')} ${d.rain_mm}mm · ET0 ${d.et0}mm · ${d.tmin}-${d.tmax}°C`));
-    } else {
-      // Same rules and words as Today's Farm (the server builds both from sprayAssessment).
-      const a = data.advice, w = a.bestWindow;
-      wrap.appendChild(el(`msg wx-spray wx-${a.action}`, `${t('SPRAY')}: ${t(a.action.toUpperCase())} · ${t(a.reason)}`));
-      wrap.appendChild(el('msg dim hide-small', w ? t('Best window {from}–{to} ({hours} h).', w) : t('No safe spray window left today.')));
-    }
+    // Same rules and words as Today's Farm (the server builds both from sprayAssessment).
+    const a = data.advice, w = a.bestWindow;
+    wrap.appendChild(el(`msg wx-spray wx-${a.action}`, `${t('SPRAY')}: ${t(a.action.toUpperCase())} · ${t(a.reason)}`));
+    wrap.appendChild(el('msg dim hide-small', w ? t('Best window {from}–{to} ({hours} h).', w) : t('No safe spray window left today.')));
     // Source and age always show (small screens too): a stale forecast must never pass as today's.
     const f = freshness({ provider: 'open-meteo', ...data });
     wrap.appendChild(el(f.warn ? 'msg src-stale' : 'msg dim', f.text));
@@ -93,22 +97,19 @@ export default {
   onKey(action, ctx) {
     if (action === 'STAR') {
       user.nextLocation();
-      data = null; error = null; tried = false;
+      data = null; error = null; tried = false; selectedDay = 0;
       ctx.rerender();
       return true;
     }
-    if (action === 'LEFT' || action === 'RIGHT') {
-      ctx.focus.move(action === 'LEFT' ? -1 : 1);
+    if (['UP', 'DOWN', 'LEFT', 'RIGHT'].includes(action)) {
+      const delta = action === 'UP' || action === 'LEFT' ? -1 : 1;
+      selectedDay = Math.max(0, Math.min(data.daily.length - 1, (ctx.focus?.index ?? selectedDay) + delta));
+      ctx.rerender();
+      ctx.focus.set(selectedDay);
       return true;
     }
     return false;
   },
-  onEnter(_el, ctx, i) {
-    detail = !detail;
-    this._sel = i;
-    ctx.rerender();
-    ctx.focus.set(i);
-  },
   // Refetch on every visit (the server caches for 30 min): the forecast and the signed-in member may have changed.
-  onHide() { detail = false; tried = false; data = null; },
+  onHide() { selectedDay = 0; tried = false; data = null; },
 };
