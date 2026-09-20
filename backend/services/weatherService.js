@@ -26,7 +26,7 @@ export function buildUrl(lat, lng) {
     current: FIELDS.current,
     hourly: FIELDS.hourly,
     daily: FIELDS.daily,
-    forecast_days: '7', // Today's Farm plans a week ahead; the Weather screen shows the first three
+    forecast_days: '7', // Today's Farm and the Weather screen both show the coming week.
     timezone: 'auto',
   });
   return `https://api.open-meteo.com/v1/forecast?${p}`;

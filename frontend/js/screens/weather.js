@@ -64,7 +64,7 @@ export default {
     );
     wrap.appendChild(head);
 
-    data.daily.slice(0, 3).forEach((d, i) => { // the API returns a week for Today's Farm
+    data.daily.slice(0, 7).forEach((d, i) => {
       const [ic, lb] = wmo(d.code);
       const row = el('item');
       row.append(
