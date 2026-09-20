@@ -12,7 +12,7 @@ export default {
   name: 'AskAIHome',
   title: () => (isCompact() ? 'Agri AI' : 'AgriLink AI'),
   statusBadge: () => (serverCapabilities.loaded && !serverCapabilities.text ? '○ OFF' : '● ON'),
-  softLeft: { label: () => (isCompact() ? 'Opt' : 'Options'), handler: (ctx) => ctx.router.push('AskAIMedia') },
+  softLeft: { label: 'Tools', handler: (ctx) => ctx.router.push('AskAIMedia') },
   softCenter: { label: 'Ask' },
 
   render() {
@@ -51,6 +51,7 @@ export default {
       list.appendChild(row);
     });
     wrap.appendChild(list);
+    wrap.appendChild(el('ai-hint', t('* Recent questions')));
     return wrap;
   },
 

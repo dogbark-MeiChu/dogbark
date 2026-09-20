@@ -1058,5 +1058,9 @@ export default {
   "Auto": "अपने-आप",
   "Transit spoilage": "यात्रा में खराबी",
   "Tomorrow net break-even": "कल का शुद्ध लागत-संतुलन",
+  "Tools": "उपकरण",
+  "Answer language": "उत्तर की भाषा",
+  "Recent questions": "हाल के प्रश्न",
+  "* Recent questions": "* हाल के प्रश्न",
   "Required net after costs; not a mandi price forecast.": "लागत के बाद आवश्यक शुद्ध भाव; यह मंडी भाव का पूर्वानुमान नहीं है।",
 };

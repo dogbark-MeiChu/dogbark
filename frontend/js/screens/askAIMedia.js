@@ -32,8 +32,8 @@ function optionItems() {
         : 'Not available on this device'),
       disabled: !media.voice,
     },
-    { id: 'history', label: t('History'), note: t('{n} recent', { n: history().length }) },
-    { id: 'language', label: t('Language'), note: composer.language === 'hi' ? 'हिंदी (Hindi)' : 'English' },
+    { id: 'history', label: t('Recent questions'), note: t('{n} recent', { n: history().length }) },
+    { id: 'language', label: t('Answer language'), note: composer.language === 'hi' ? 'हिंदी (Hindi)' : 'English' },
   ];
   if (composer.image || composer.audio) items.push({ id: 'remove', label: t('Remove attachment'), note: composer.attachmentLabel });
   return items;
@@ -41,7 +41,7 @@ function optionItems() {
 
 export const AskAIMedia = {
   name: 'AskAIMedia',
-  title: 'Options',
+  title: 'Tools',
   numericSelect: true,
   softLeft: { label: '', handler() {} },
   onShow(ctx) {

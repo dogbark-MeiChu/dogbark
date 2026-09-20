@@ -1058,5 +1058,9 @@ export default {
   "Auto": "স্বয়ংক্রিয়",
   "Transit spoilage": "যাত্রাপথের ক্ষতি",
   "Tomorrow net break-even": "আগামীকালের নিট সমতা",
+  "Tools": "সরঞ্জাম",
+  "Answer language": "উত্তরের ভাষা",
+  "Recent questions": "সাম্প্রতিক প্রশ্ন",
+  "* Recent questions": "* সাম্প্রতিক প্রশ্ন",
   "Required net after costs; not a mandi price forecast.": "খরচের পর প্রয়োজনীয় নিট মূল্য; এটি মান্ডি দামের পূর্বাভাস নয়।",
 };

@@ -1058,5 +1058,9 @@ export default {
   "Auto": "Tự động",
   "Transit spoilage": "Hao hụt vận chuyển",
   "Tomorrow net break-even": "Mức hòa vốn ròng ngày mai",
+  "Tools": "Công cụ",
+  "Answer language": "Ngôn ngữ trả lời",
+  "Recent questions": "Câu hỏi gần đây",
+  "* Recent questions": "* Câu hỏi gần đây",
   "Required net after costs; not a mandi price forecast.": "Mức ròng cần có sau chi phí; không phải dự báo giá mandi.",
 };
