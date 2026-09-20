@@ -110,3 +110,6 @@
 
 # 2026-09-20 10:35 Fixed Context Demo
 - **What was changed**: Replaced the spray task scenario in demo.md with the heavy rain / harvest task scenario to match the final presentation context (as requested by the updated slide deck image).
+
+# 2026-09-20 10:48 Translated Demo Script
+- **What was changed**: Translated all spoken presenter quotes in docs/demo.md into Traditional Chinese to match the final presentation slide language and exact phrasing requested in the context image.

@@ -25,8 +25,7 @@
 
 Say:
 
-> "It is day two of a power outage in Uttar Pradesh. Rakesh's smartphone is dead.
-> He picks up his keypad phone, opens AgriLink, and sees exactly this."
+> 「情境是這樣：停電第二天，智慧型手機沒電了。農夫拿起這支按鍵機，打開 AgriLink，直接看到 Today 畫面。」
 
 Point to the Home screen. Three rows, nothing more:
 
@@ -46,9 +45,7 @@ Today  09:14          Synced 09:13
 0  All features       # Read · * Bright
 ```
 
-> "Row 1: today's wheat price. Row 2: a buyer is waiting for an answer.
-> Row 3: his farm, and a rain warning already surfaced from the weather data.
-> Everything he needs. One screen. No menu to open."
+> 「他不需要進任何選單。畫面直接給他三件事：今天的小麥價格、一個等待他回覆的買家出價，以及農場任務與明日大雨的警告。」
 
 ---
 
@@ -61,23 +58,21 @@ Today  09:14          Synced 09:13
 
 Press **3** (or arrow to row 3, Enter).
 
-> "Let's check the farm first. The app warns of heavy rain tomorrow.
-> He wants to bring the harvest task forward to today."
+> 「按 3 進入農場。App 警告明天有大雨，建議今天收成。他將收成任務提前到今天並指派給工人。」
 
 Navigate to the harvest task. Press Enter to open the task.
 Press the softkey for **Reschedule**. Set the date to today, and assign it to the worker.
 
-> "Harvest rescheduled."
+> 「收成任務已更新。」
 
 **Point to Phone B immediately.**
 
-> "Watch Phone B -- Ravi's screen. He is the assigned worker."
+> 「請看第二支手機——這是工人的畫面。」
 
 Phone B's Home row 3 or Today's Farm dashboard updates within seconds:
 a toast notification appears: "Harvest task rescheduled to today."
 
-> "This is CloudMosa's cloud value on a fifteen-dollar phone. Two devices,
-> one shared farm, real-time sync -- no smartphone required."
+> 「畫面即時更新。這一步展示了 CloudMosa 的雲端價值：多人資料同步，而且完全不需要智慧型手機。」
 
 Press **Back** to return to Home.
 
@@ -88,8 +83,7 @@ Press **Back** to return to Home.
 
 Press **1** (row 1: Market Prices).
 
-> "Rakesh grows wheat. The app shows prices from three nearby mandis --
-> but not just the headline price. Each one is the net amount after transport costs."
+> 「按 1 查看小麥價格。這裡比較三個 mandi 扣掉運費後的實際收入。」
 
 Point to the three market rows. Highlight:
 - Distance in km to each mandi
@@ -98,9 +92,7 @@ Point to the three market rows. Highlight:
 
 Scroll to the best option (Kanpur or whichever shows the highest net).
 
-> "Each number has a source and a timestamp. This is Agmarknet --
-> the government's own database -- synced thirty minutes ago.
-> Not a scrape, not an estimate. Official data."
+> 「每一個數字都有確切的來源和時間。這不是預測，這是官方資料。」
 
 Press **Enter** on a market to go to PriceDetail.
 
@@ -125,8 +117,7 @@ Wheat · 500 qt · Rs.2,450/qt
 Total estimate: Rs.12,25,000
 ```
 
-> "Meena is a Verified Trader -- AgriLink counts qualifying deals across unique counterparties
-> to prevent ring trading. This badge means something."
+> 「按 2 查看買家出價。Meena 是一位經驗證的交易者（Verified Trader）。」
 
 Press the **Accept** softkey. The Trade Confirm screen opens:
 
@@ -148,22 +139,20 @@ AgriLink moves no money. Pay at handover.
 # Read aloud · * Delete
 ```
 
-> "Before he confirms, he sees the mandi benchmark right here. This offer is 13% below
-> today's Kanpur price -- the app flags it. He can decide whether that's worth it."
+> 「進到確認頁。畫面上會顯示這個出價比今天 mandi 的價格低 13% 的警告。」
 
 Press **#**.
 
-> "He is not fully literate. He presses hash."
+> 「如果他不識字，按 # 鍵，系統會用 Hindi 朗讀給他聽。」
 
 The TTS reads the full summary aloud in Hindi:
 > "Offer swikarein. Gehun, 500 quintal, Rs.2,450 pratyek quintal..."
 
-> "This is the Shush mechanism -- press hash once to read, press hash again to stop."
+> 「這就是 Shush 機制——按一次朗讀，再按一次停止。」
 
 After TTS finishes, type **0 0** (the last two digits of Rs.12,25,000).
 
-> "To confirm, he types the last two digits of the total. Not one button press --
-> a pocket press cannot accidentally commit a half-million rupee trade."
+> 「最後輸入總金額的末兩碼確認。這防止了口袋誤觸，也防止盲目確認。」
 
 The deal is created. Press **Back** to return.
 
@@ -172,11 +161,11 @@ The deal is created. Press **Back** to return.
 ### Step 4 - Sim Trade (Backend Integration)
 **Time budget: ~30-60 seconds**
 
-> "Now, we will demonstrate a live simulated trade. We initiate this trade directly from our backend testing server."
+> 「接下來，我們透過後端發起一筆模擬交易 (Sim Trade)。」
 
 *(Trigger the simulated trade from the backend)*
 
-> "As you can see, the demo phone reacts instantly to the new incoming trade data."
+> 「你可以看到，這支按鍵機會即時反應新的交易數據。」
 
 *(Briefly show the UI reaction on the demo phone)*
 
@@ -189,19 +178,14 @@ Press **2** (row 2: Sell / Buy). Navigate to **My Deals**. Open the deal with Me
 
 Show the deal status: `pickup_scheduled`.
 
-> "They agreed on a pickup location and time offline. Now Rakesh is at the mandi.
-> Meena shows him her phone -- he types her four-digit pickup code."
+> 「現在到市場交貨。雙方見面後，農夫輸入買家的 pickup code。」
 
 Navigate to the **Verify pickup** action. Enter the 4-digit code shown on Phone B
 (or enter the correct code from Meena's deal screen).
 
-> "Code verified. Delivery complete."
+> 「驗證成功，交貨完成。全程沒有拿出智慧型手機，也沒有線上付款。」
 
 Show the deal status transition to `handed_over`.
-
-> "The entire transaction -- price check, offer, acceptance, delivery confirmation --
-> happened on a fifteen-dollar keypad phone. Rakesh never took out a smartphone.
-> No online payment. No bank account. No app install."
 
 Press **Back** to Home.
 
@@ -210,7 +194,7 @@ Press **Back** to Home.
 ### Step 6 - Lost phone: sign out other devices (10 seconds)
 **Time budget: ~20 seconds**
 
-> "One more thing. What if his phone is lost or stolen?"
+> 「收尾的 10 秒鐘。如果『手機掉了？』」
 
 Press **0** -> Settings (item 7) -> navigate to **Sign out other phones**.
 Show the confirmation screen:
@@ -225,9 +209,7 @@ This phone stays signed in.
 2  No, go back
 ```
 
-> "One key press. The server revokes every other session.
-> The transaction history, the farm data, the deal records -- all stay on the server.
-> The lost phone goes dark."
+> 「只要到另一支手機上，一鍵登出其他裝置，所有的資料就安全了。」
 
 Do NOT confirm -- press 2 (No, go back) to keep the demo account live.
 
