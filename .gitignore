@@ -4,3 +4,4 @@ node_modules/
 backend/.env
 backend/tmp/
 backend/uploads/
+docs/agrilink-explorer.html
