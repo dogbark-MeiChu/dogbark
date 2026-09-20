@@ -23,7 +23,8 @@
     "market:seed": "node db/marketSeed.js",
     "farm:seed": "node db/farmOpsSeed.js",
     "farm:dev": "node dev/farmOpsDevServer.js",
-    "demo:dev": "node dev/demoDevServer.js"
+    "demo:dev": "node dev/demoDevServer.js",
+    "demo:console": "node dev/demoConsole/server.js"
   },
   "dependencies": {
     "ajv": "^8.20.0",

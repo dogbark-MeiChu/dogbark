@@ -35,8 +35,8 @@ const afterCreate = (kind) => (ctx, result) => ctx.router.replace('MarketDetail'
 function badge(ctx) {
   marketApi.offers('incoming').then((r) => {
     const n = r.items.filter((i) => i.awaitingMyResponse).length;
-    const target = ctx.root?.querySelectorAll('.item')[4]?.querySelector('.forum-choice-label');
-    if (target) target.textContent = n ? t('Offers to Answer ({n} new)', { n }) : t('Offers to Answer');
+    const target = ctx.root?.querySelectorAll('.item')[4];
+    if (target) target.textContent = `5  ${n ? t('Offers to Answer ({n} new)', { n }) : t('Offers to Answer')}`;
   }).catch(() => {});
 }
 
@@ -46,12 +46,13 @@ export const MarketHome = {
   numericSelect: true,
   softLeft: { label: '', handler() {} },
   render(ctx) {
-    const wrap = el('forum-screen');
     const list = el('list');
-    HOME.forEach(([label], i) => list.appendChild(row(i + 1, label)));
-    wrap.appendChild(list);
-    if (ctx.params?.notice) wrap.appendChild(el('forum-error-text', ctx.params.notice));
-    return wrap;
+    HOME.forEach(([label], i) => {
+      const item = el('item', `${i + 1}  ${t(label)}`);
+      list.appendChild(item);
+    });
+    if (ctx.params?.notice) list.appendChild(el('msg', ctx.params.notice));
+    return list;
   },
   onShow(ctx) { badge(ctx); },
   onRefresh(ctx) { badge(ctx); },

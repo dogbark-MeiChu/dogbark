@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgriLink demo console</title>
+<style>
+  :root {
+    --bg: #11140f; --panel: #191d16; --panel-2: #212619; --line: #2f3626;
+    --ink: #e8ecdf; --muted: #9aa48c; --accent: #8fd14f; --accent-ink: #14200a;
+    --warn: #e0b341; --bad: #e4614f; --good: #7bc96f;
+    font-synthesis: none;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink); font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  header {
+    position: sticky; top: 0; z-index: 5; display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+    padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  header h1 { font-size: 14px; margin: 0 8px 0 0; letter-spacing: .04em; }
+  .pill { padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .pill.up, .pill.external { color: var(--accent); border-color: #45632a; }
+  .pill.down, .pill.failed { color: var(--bad); border-color: #5a2b24; }
+  .pill.starting { color: var(--warn); border-color: #5c4a1c; }
+  button {
+    font: inherit; color: var(--ink); background: var(--panel-2); border: 1px solid var(--line);
+    padding: 5px 10px; border-radius: 6px; cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  button.danger { border-color: #5a2b24; color: var(--bad); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  main { display: grid; grid-template-columns: minmax(360px, 460px) 1fr; gap: 16px; padding: 16px; align-items: start; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 16px; overflow: hidden; }
+  section > h2 {
+    margin: 0; padding: 8px 12px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--muted); background: var(--panel-2); border-bottom: 1px solid var(--line);
+  }
+  .act { border-bottom: 1px solid var(--line); padding: 10px 12px; }
+  .act:last-child { border-bottom: 0; }
+  .act summary { cursor: pointer; display: flex; justify-content: space-between; gap: 10px; align-items: center; list-style: none; }
+  .act summary::-webkit-details-marker { display: none; }
+  .act summary strong { font-weight: 600; }
+  .act .hint { color: var(--muted); font-size: 12px; margin: 6px 0 8px; }
+  .field { display: grid; grid-template-columns: 110px 1fr; gap: 8px; align-items: center; margin: 6px 0; }
+  .field label { color: var(--muted); font-size: 12px; }
+  input, select {
+    font: inherit; width: 100%; padding: 5px 7px; border-radius: 6px;
+    background: var(--bg); color: var(--ink); border: 1px solid var(--line);
+  }
+  .result { margin-top: 8px; padding: 7px 9px; border-radius: 6px; white-space: pre-wrap; font-size: 12px; }
+  .result.ok { background: #1c2a14; color: var(--good); }
+  .result.err { background: #2a1714; color: var(--bad); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 5px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+  tbody tr:last-child td { border-bottom: 0; }
+  .tag { padding: 1px 6px; border-radius: 4px; background: var(--panel-2); color: var(--muted); font-size: 11px; }
+  .tag.open, .tag.countered, .tag.active { color: var(--accent); }
+  .tag.accepted, .tag.completed, .tag.agreed, .tag.triggered { color: var(--good); }
+  .tag.declined, .tag.cancelled, .tag.expired { color: var(--bad); }
+  .empty { padding: 12px; color: var(--muted); }
+  .tabs { display: flex; gap: 6px; padding: 8px 12px; background: var(--panel-2); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .tabs button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .log li { list-style: none; padding: 5px 12px; border-bottom: 1px solid var(--line); color: var(--muted); }
+  .log li b { color: var(--ink); font-weight: 600; }
+  .log li.bad b { color: var(--bad); }
+  .spacer { flex: 1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>AGRILINK DEMO CONSOLE</h1>
+  <span>tunnel <span id="tunnel" class="pill">…</span></span>
+  <span>db <span id="db" class="pill">…</span></span>
+  <span>key <span id="key" class="pill">…</span></span>
+  <span id="host" class="pill"></span>
+  <div class="spacer"></div>
+  <button id="btn-tunnel">Start tunnel</button>
+  <button id="btn-connect">Connect DB</button>
+  <button id="btn-refresh" class="primary">Refresh</button>
+  <label style="color:var(--muted)"><input type="checkbox" id="auto" style="width:auto" checked> auto 5s</label>
+</header>
+<main>
+  <div id="actions"></div>
+  <div>
+    <section>
+      <h2>Live state</h2>
+      <div class="tabs" id="tabs"></div>
+      <div id="table"></div>
+    </section>
+    <section>
+      <h2>Activity</h2>
+      <ul class="log" id="log"><li class="empty">Nothing yet.</li></ul>
+    </section>
+  </div>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
