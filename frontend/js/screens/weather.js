@@ -80,15 +80,20 @@ export default {
           `${d.tmin}-${d.tmax}°C`,
         ].filter(Boolean).join(' · ');
         row.appendChild(el('weather-day-detail', detail));
+        const a = d.advice;
+        if (a) {
+          const window = a.bestWindow;
+          const spray = [
+            `${t('SPRAY')}: ${t(a.action.toUpperCase())} · ${t(a.reason)}`,
+            window ? t('Best window {from}–{to} ({hours} h).', window) : t('No safe spray window left today.'),
+          ].join(' ');
+          row.appendChild(el(`weather-day-detail weather-day-spray wx-${a.action}`, spray));
+        }
       }
       row.dataset.i = i;
       wrap.appendChild(row);
     });
 
-    // Same rules and words as Today's Farm (the server builds both from sprayAssessment).
-    const a = data.advice, w = a.bestWindow;
-    wrap.appendChild(el(`msg wx-spray wx-${a.action}`, `${t('SPRAY')}: ${t(a.action.toUpperCase())} · ${t(a.reason)}`));
-    wrap.appendChild(el('msg dim hide-small', w ? t('Best window {from}–{to} ({hours} h).', w) : t('No safe spray window left today.')));
     // Source and age always show (small screens too): a stale forecast must never pass as today's.
     const f = freshness({ provider: 'open-meteo', ...data });
     wrap.appendChild(el(f.warn ? 'msg src-stale' : 'msg dim', f.text));

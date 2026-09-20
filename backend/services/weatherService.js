@@ -74,8 +74,9 @@ export function normalize(raw) {
 
 // Spray advice for the Weather screen: the same rules as Today's Farm (services/sprayAssessment.js),
 // so the two screens can never disagree. The worst factor decides; its reason is the one shown.
-export function advise(w) {
-  const a = assessSprayConditions(w);
+export function advise(w, { date = null } = {}) {
+  const a = assessSprayConditions(w, { date });
+  if (!a) return null;
   const worstFactor = a.factors.find((f) => f.status === 'unsuitable') || a.factors.find((f) => f.status === 'caution');
   return {
     action: a.overall,
@@ -95,6 +96,7 @@ export async function getWeather(lat, lng, { fetchImpl = fetch, now = Date.now }
     if (!res.ok) throw new Error(`open-meteo ${res.status}`);
     const data = normalize(await res.json());
     data.advice = advise(data);
+    data.daily.forEach((day) => { day.advice = advise(data, { date: day.date }); });
     const fetched = now();
     cache.set(key, { at: fetched, data });
     return { ...data, stale: false, fetchedAt: at(fetched) };

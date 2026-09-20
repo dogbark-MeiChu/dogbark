@@ -135,6 +135,45 @@ export function createAuthService(pool, env = process.env) {
     } catch (err) { await client.query('ROLLBACK'); throw err; } finally { client.release(); }
   }
 
+  /**
+   * Replaces an account's PIN. Identify the account by `userId` or by `phone`.
+   *
+   * Pass `currentPin` to require the old PIN first (a member changing their own); leave it out for
+   * an operator reset. Either way the account's failed-attempt counter and lockout are cleared —
+   * a forgotten PIN and a locked account are the same problem from the member's side.
+   *
+   * Existing sessions are revoked by default, because a PIN change that leaves an old session
+   * signed in does not actually take the account back. Pass `revokeSessions: false` to keep them.
+   */
+  async function setPin({ userId = null, phone = null, pin, currentPin = null, revokeSessions = true }) {
+    const cleanPin = validatePin(pin);
+    if (!userId && !phone) throw coded('INVALID_TARGET', 'Give a userId or a phone number.');
+    const where = userId ? 'c.user_id=$1' : 'c.login_hash=$1';
+    const key = userId || lookup(phone);
+    const row = (await pool.query(
+      `SELECT u.id, u.status, c.pin_hash FROM app.auth_credentials c JOIN app.users u ON u.id=c.user_id
+       WHERE ${where}`, [key])).rows[0];
+    if (!row) throw coded('NOT_FOUND', 'No account for that phone number.', 404);
+    if (currentPin !== null && !await matchesPin(validatePin(currentPin), row.pin_hash)) {
+      throw coded('INVALID_LOGIN', 'Current PIN is incorrect.', 401);
+    }
+    if (await matchesPin(cleanPin, row.pin_hash)) throw coded('PIN_UNCHANGED', 'Choose a different PIN.');
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        `UPDATE app.auth_credentials SET pin_hash=$2, pin_changed_at=now(), updated_at=now(),
+           failed_attempts=0, locked_until=NULL WHERE user_id=$1`,
+        [row.id, await scrypt(cleanPin)]);
+      const revoked = revokeSessions
+        ? (await client.query('DELETE FROM app.auth_sessions WHERE user_id=$1', [row.id])).rowCount
+        : 0;
+      await client.query('COMMIT');
+      return { userId: row.id, revokedSessions: revoked };
+    } catch (err) { await client.query('ROLLBACK'); throw err; } finally { client.release(); }
+  }
+
   async function session(token) {
     if (!token) return null;
     const [id, secret] = token.split('.');
@@ -180,5 +219,5 @@ export function createAuthService(pool, env = process.env) {
     return result.rows[0] || null;
   }
 
-  return { signup, login, session, logout, logoutOthers, profileFor, secureCookies };
+  return { signup, login, setPin, session, logout, logoutOthers, profileFor, secureCookies };
 }
