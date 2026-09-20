@@ -1,6 +1,6 @@
 import { t } from '../i18n/index.js';
 const ITEMS = [
-  { label: 'Market Prices', to: 'MarketPrices' },
+  { label: 'Mandi Prices', to: 'MarketPrices' },
   { label: 'Sell / Buy', to: 'MarketHome' },
   { label: "Today's Farm", to: 'FarmGate' },
   { label: 'Ask AI', to: 'AskAIHome' },

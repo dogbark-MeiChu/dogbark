@@ -35,7 +35,7 @@ async function load(ctx) {
 
 export default {
   name: 'PriceDetail',
-  title: 'TruePrice',
+  title: 'Net Price',
   softCenter: { label: '' },
   initialFocus: () => focusIndex,
   onShow(ctx) { if (!calc && !loading && !error) load(ctx); },

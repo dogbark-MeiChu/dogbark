@@ -69,7 +69,7 @@ function switchCrop(ctx, delta) {
 
 export default {
   name: 'MarketPrices',
-  title: 'Market Prices',
+  title: 'Mandi Prices',
   softCenter: { label: 'Detail' },
   // Price alerts for the crop on screen: the cloud watches its mandi price.
   softLeft: { label: 'Alerts', handler: (ctx) => ctx.router.push('PriceAlerts', crops?.length ? { crop: crops[ci] } : {}) },

@@ -95,6 +95,8 @@ export default {
   "Inbox": "इनबॉक्स",
   "Sent": "भेजे गए",
   "Market Prices": "मंडी भाव",
+  "Mandi Prices": "मंडी भाव",
+  "Net Price": "शुद्ध मूल्य",
   "Sell / Buy": "बेचें / खरीदें",
   "Farmer Circle": "किसान मंडली",
   "Ask AI": "AI से पूछें",

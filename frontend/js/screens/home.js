@@ -119,7 +119,7 @@ const pending = (n, key, title, v) => row(n, key, { main: title, meta: v ? `⚠ 
 
 function priceRow() {
   const v = rows.price;
-  if (!v?.ok) return pending(1, 'price', t('Market Prices'), v);
+  if (!v?.ok) return pending(1, 'price', t('Mandi Prices'), v);
   const pct = String(v.change ?? '');
   const arrow = pct.startsWith('-') ? '▼' : Number.parseFloat(pct) > 0 ? '▲' : '';
   const change = pct && pct !== '0' && pct !== '+0%' ? ` ${arrow}${pct}${pct.endsWith('%') ? '' : '%'}` : '';

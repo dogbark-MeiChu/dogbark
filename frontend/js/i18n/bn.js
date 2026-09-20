@@ -95,6 +95,8 @@ export default {
   "Inbox": "ইনবক্স",
   "Sent": "পাঠানো",
   "Market Prices": "বাজারদর",
+  "Mandi Prices": "মান্ডি দর",
+  "Net Price": "নিট মূল্য",
   "Sell / Buy": "বিক্রি / কেনা",
   "Farmer Circle": "কৃষক সার্কেল",
   "Ask AI": "AI-কে জিজ্ঞাসা",

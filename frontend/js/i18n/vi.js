@@ -95,6 +95,8 @@ export default {
   "Inbox": "Hộp thư",
   "Sent": "Đã gửi",
   "Market Prices": "Giá thị trường",
+  "Mandi Prices": "Giá chợ mandi",
+  "Net Price": "Giá ròng",
   "Sell / Buy": "Bán / Mua",
   "Farmer Circle": "Cộng đồng nông dân",
   "Ask AI": "Hỏi AI",
