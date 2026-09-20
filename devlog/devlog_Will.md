@@ -107,3 +107,6 @@
 # 2026-09-20 10:25 Updated Demo Script with Sim Trade
 - **What was changed**: Inserted a new step (Step 4) into docs/demo.md to showcase a backend-initiated simulated trade reacting on the demo phone. Renumbered subsequent steps.
 - **Verification**: The 30-60 second backend sim trade block is now properly documented in the flow.
+
+# 2026-09-20 10:35 Fixed Context Demo
+- **What was changed**: Replaced the spray task scenario in demo.md with the heavy rain / harvest task scenario to match the final presentation context (as requested by the updated slide deck image).

@@ -41,13 +41,13 @@ Today  09:14          Synced 09:13
    Wheat 500 qt · Rs.2,450 · Meena S.
 
 3  Farm: 4 tasks open
-   SPRAY: CAUTION · safe 06:00-09:00
+   ⚠ Rain tomorrow 80%
 
 0  All features       # Read · * Bright
 ```
 
 > "Row 1: today's wheat price. Row 2: a buyer is waiting for an answer.
-> Row 3: his farm, and a spray warning already surfaced from the weather data.
+> Row 3: his farm, and a rain warning already surfaced from the weather data.
 > Everything he needs. One screen. No menu to open."
 
 ---
@@ -56,25 +56,25 @@ Today  09:14          Synced 09:13
 
 ---
 
-### Step 1 - Farm task: reschedule spray, worker notified in real time
+### Step 1 - Farm task: bring harvest forward, worker notified in real time
 **Time budget: ~60 seconds**
 
 Press **3** (or arrow to row 3, Enter).
 
-> "Let's check the farm first. The spray assessment says Caution -- there is rain forecast
-> tomorrow afternoon. He wants to move the spray task to this morning's safe window."
+> "Let's check the farm first. The app warns of heavy rain tomorrow.
+> He wants to bring the harvest task forward to today."
 
-Navigate to the spray task (it will be flagged as Caution/Unsuitable). Press Enter to open the task.
-Press the softkey for **Reschedule**. Set the date to today, time to 06:00.
+Navigate to the harvest task. Press Enter to open the task.
+Press the softkey for **Reschedule**. Set the date to today, and assign it to the worker.
 
-> "Task rescheduled."
+> "Harvest rescheduled."
 
 **Point to Phone B immediately.**
 
 > "Watch Phone B -- Ravi's screen. He is the assigned worker."
 
 Phone B's Home row 3 or Today's Farm dashboard updates within seconds:
-a toast notification appears: "Spray task rescheduled to today 06:00."
+a toast notification appears: "Harvest task rescheduled to today."
 
 > "This is CloudMosa's cloud value on a fifteen-dollar phone. Two devices,
 > one shared farm, real-time sync -- no smartphone required."
