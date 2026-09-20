@@ -1,7 +1,7 @@
 import { t } from '../i18n/index.js';
 import { el, isCompact } from '../dom.js';
 import { getJSON } from '../api.js';
-import { identity, user } from '../state.js';
+import { farmOps, identity, user } from '../state.js';
 import { freshness } from '../freshness.js';
 import { pricePlace, pointQuery } from '../place.js';
 import { marketApi } from '../market/marketApi.js';
