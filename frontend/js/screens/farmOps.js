@@ -103,21 +103,36 @@ async function pickRegion(ctx,name){
 let creatingFarm=false;
 async function createFarm(ctx,body){ if(creatingFarm)return; creatingFarm=true; try{ const out=await api.createFarm(body); const f=(await api.farms()).items.find((x)=>x.id===out.id); if(f) openFarm(ctx,f); }catch(e){ flash(e.message); }finally{ creatingFarm=false; } }
 function ensureFarm(ctx){ if(!farmOps.activeFarmId){ctx.router.replace('FarmGate');return false;}return true; }
+const FARM_VIEWS = [
+  ['Switch farm', 'FarmGate'],
+  ['Calendar', 'FarmCalendar'],
+  ['Next 7 days', 'FarmUpcoming'],
+  ['My tasks', 'MyFarmTasks'],
+  ['Farm records', 'FarmRecords'],
+  ['Team', 'FarmTeam'],
+  ['Fields & crops', 'FarmFields'],
+];
+export const FarmViews = {
+  name:'FarmViews',title:'Views',numericSelect:true,
+  softLeft:{label:'',handler(){}},softRight:{label:'Back',handler:(ctx)=>ctx.router.pop()},
+  render(){const root=el('list');FARM_VIEWS.forEach(([label],i)=>root.append(el('item',`${i+1}  ${tr(label)}`)));return root;},
+  onEnter(_node,ctx,i){const route=FARM_VIEWS[i]?.[1];if(route)ctx.router.replace(route);},
+};
 export const TodayDashboard = asyncScreen({
   name:'TodayDashboard',title:()=>"Today's Farm",softLeft:{label:'Add',handler:(ctx)=>ctx.router.push('FarmTaskCreate')},
   load(ctx){ if(!ensureFarm(ctx)) return Promise.reject(new Error(tr('Choose a farm'))); return api.today(farmOps.activeFarmId,farmOps.activeDate); },
-  renderData(data){ const root=el('ops-page'); root.append(el('ops-date-switcher',`${data.farm.name} · ${niceDate(data.date)}`),el('ops-progress',tr('{done} / {total} complete · {active} active · {blocked} blocked',{done:data.summary.completed,total:data.summary.total,active:data.summary.inProgress,blocked:data.summary.blocked}))); const wr=weatherRow(data),mr=marketRow(data.marketSnapshots||(data.marketSnapshot?[data.marketSnapshot]:[]));if(wr)root.append(wr);if(mr)root.append(mr);if(data.alerts?.[0])root.append(el('ops-alert',data.alerts[0].message)); section(root,'OVERDUE',data.sections.overdue);section(root,'BLOCKED',data.sections.blocked);section(root,'IN PROGRESS',data.sections.inProgress);section(root,'DUE TODAY',data.sections.dueToday||data.sections.due);section(root,'UNASSIGNED',data.sections.unassigned);const c=data.communityActivity;if(c&&(c.unreadReplies||c.newPostsToday)){const row=el('item ops-community',tr('🌾 Circle: {replies} new replies · {posts} posts',{replies:c.unreadReplies,posts:c.newPostsToday}));row.dataset.route='FarmerCircleHome';root.append(row);}section(root,'COMPLETED',data.sections.completedToday||data.sections.completed); if(!root.querySelector('.ops-task-row'))root.append(message('No work scheduled. Press Add.')); root.append(el('ops-task-meta',tr('◄► day · 1 Farms · 2 Calendar · 3 Next 7 days · 4 Mine · 5 Records · 6 Team · 7 Fields'))); return root; },
-  onKey(action,ctx){ if(action==='NUM_1'){ctx.router.replace('FarmGate');return true;} const map={NUM_2:'FarmCalendar',NUM_3:'FarmUpcoming',NUM_4:'MyFarmTasks',NUM_5:'FarmRecords',NUM_6:'FarmTeam',NUM_7:'FarmFields'}; if(map[action]){ctx.router.push(map[action]);return true;} if(action==='LEFT'||action==='RIGHT'){farmOps.activeDate=dateShift(farmOps.activeDate,action==='LEFT'?-1:1);ctx.router.replace('TodayDashboard');return true;} },
+  renderData(data){ const root=el('ops-page'); root.append(el('ops-date-switcher',`${data.farm.name} · ${niceDate(data.date)}`),el('ops-progress',tr('{done} / {total} complete · {active} active · {blocked} blocked',{done:data.summary.completed,total:data.summary.total,active:data.summary.inProgress,blocked:data.summary.blocked}))); const wr=weatherRow(data),mr=marketRow(data.marketSnapshots||(data.marketSnapshot?[data.marketSnapshot]:[]));if(wr)root.append(wr);if(mr)root.append(mr);if(data.alerts?.[0])root.append(el('ops-alert',data.alerts[0].message)); section(root,'OVERDUE',data.sections.overdue);section(root,'BLOCKED',data.sections.blocked);section(root,'IN PROGRESS',data.sections.inProgress);section(root,'DUE TODAY',data.sections.dueToday||data.sections.due);section(root,'UNASSIGNED',data.sections.unassigned);const c=data.communityActivity;if(c&&(c.unreadReplies||c.newPostsToday)){const row=el('item ops-community',tr('🌾 Circle: {replies} new replies · {posts} posts',{replies:c.unreadReplies,posts:c.newPostsToday}));row.dataset.route='FarmerCircleHome';root.append(row);}section(root,'COMPLETED',data.sections.completedToday||data.sections.completed); if(!root.querySelector('.ops-task-row'))root.append(message('No work scheduled. Press Add.')); root.append(el('ops-task-meta',tr('◄► day · # Views · 1–7 shortcuts'))); return root; },
+  onKey(action,ctx){ if(action==='HASH'){ctx.router.push('FarmViews');return true;} if(action==='NUM_1'){ctx.router.replace('FarmGate');return true;} const map={NUM_2:'FarmCalendar',NUM_3:'FarmUpcoming',NUM_4:'MyFarmTasks',NUM_5:'FarmRecords',NUM_6:'FarmTeam',NUM_7:'FarmFields'}; if(map[action]){ctx.router.push(map[action]);return true;} if(action==='LEFT'||action==='RIGHT'){farmOps.activeDate=dateShift(farmOps.activeDate,action==='LEFT'?-1:1);ctx.router.replace('TodayDashboard');return true;} },
   onEnter(node,ctx){if(node?.dataset.market){farmOps.marketIndex=(farmOps.marketIndex||0)+1;return ctx.rerender();}if(node?.dataset.route)return ctx.router.push(node.dataset.route);const id=node?.dataset.id;if(id)ctx.router.push('FarmTaskDetail',{id});},
 });
 
-export const FarmUpcoming = asyncScreen({ name:'FarmUpcoming',title:'Upcoming',softLeft:{label:'Add',handler:(ctx)=>ctx.router.push('FarmTaskCreate')},
+export const FarmUpcoming = asyncScreen({ name:'FarmUpcoming',title:'Next 7 days',softLeft:{label:'Add',handler:(ctx)=>ctx.router.push('FarmTaskCreate')},
   load:()=>api.upcoming(farmOps.activeFarmId,farmOps.activeDate,7),
   renderData(data){const root=el('ops-page');let day='';for(const t of data.items){if(t.localDate!==day){day=t.localDate;root.append(el('ops-agenda-day',`${day===farmOps.activeDate?tr('TODAY'):niceDate(day)} · ${day}`));}root.append(taskRow(t));}return data.items.length?root:message('Nothing scheduled in the next 7 days.');},
   onEnter(node,ctx){if(node?.dataset.id)ctx.router.push('FarmTaskDetail',{id:node.dataset.id});},
 });
 
-export const MyFarmTasks = asyncScreen({ name:'MyFarmTasks',title:'My Tasks',load:()=>api.tasks(farmOps.activeFarmId,`mine=true&from=${dateShift(farmOps.activeDate,-30)}&to=${dateShift(farmOps.activeDate,30)}`),
+export const MyFarmTasks = asyncScreen({ name:'MyFarmTasks',title:'My tasks',load:()=>api.tasks(farmOps.activeFarmId,`mine=true&from=${dateShift(farmOps.activeDate,-30)}&to=${dateShift(farmOps.activeDate,30)}`),
   renderData(data){const root=el('list');data.items.forEach((t)=>root.append(taskRow(t)));return data.items.length?root:message('No tasks assigned to you.');},
   onEnter(node,ctx){if(node?.dataset.id)ctx.router.push('FarmTaskDetail',{id:node.dataset.id});},
 });
@@ -214,7 +229,7 @@ export const FarmTaskDetail = asyncScreen({ name:'FarmTaskDetail',title:'Task De
 });
 
 // Two steps on one screen: the kind of work, then the field (when the farm has fields).
-const PRESETS=[['Field inspection','inspection','normal'],['Irrigation check','irrigation','high'],['Pump maintenance','machinery','high'],['Farm record','record','normal']];
+const PRESETS=[['Field inspection','inspection','normal'],['Irrigation check','irrigation','high'],['Pump maintenance','machinery','high'],['Record farm work','record','normal']];
 let creatingTask=false;
 async function createFromPreset(ctx,i,fieldId){
   if(creatingTask)return; creatingTask=true; const p=PRESETS[i];
@@ -292,4 +307,4 @@ export const FarmFieldDetail = asyncScreen({name:'FarmFieldDetail',title:(ctx)=>
     if(!data.items.length)root.append(message('Nothing open on this field.'));return root;},
   onEnter:openTask});
 
-export const farmOpsScreens={FarmGate,TodayDashboard,FarmUpcoming,MyFarmTasks,FarmCalendar,FarmTaskDetail,FarmTaskCreate,FarmRecords,FarmRecordDetail,FarmTeam,FarmMemberDetail,FarmFields,FarmFieldDetail};
+export const farmOpsScreens={FarmGate,FarmViews,TodayDashboard,FarmUpcoming,MyFarmTasks,FarmCalendar,FarmTaskDetail,FarmTaskCreate,FarmRecords,FarmRecordDetail,FarmTeam,FarmMemberDetail,FarmFields,FarmFieldDetail};
