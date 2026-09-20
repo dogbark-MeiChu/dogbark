@@ -397,6 +397,30 @@ export const actions = [
     },
   },
   {
+    id: 'sync.pause',
+    group: 'State',
+    label: 'Pause the mandi sync',
+    hint: 'Stops the 30-minute Agmarknet timer so a hand-set price survives the demo. Remember to resume it after.',
+    fields: [],
+    async run() {
+      await ssh('sudo -n systemctl stop agrilink-mandi-sync.timer');
+      const { stdout } = await ssh('systemctl is-active agrilink-mandi-sync.timer || true');
+      return { message: `Mandi sync timer is now ${stdout.trim()}. Hand-set prices will stick.` };
+    },
+  },
+  {
+    id: 'sync.resume',
+    group: 'State',
+    label: 'Resume the mandi sync',
+    hint: 'Puts the Agmarknet timer back. Run this when the demo is over.',
+    fields: [],
+    async run() {
+      await ssh('sudo -n systemctl start agrilink-mandi-sync.timer');
+      const { stdout } = await ssh('systemctl is-active agrilink-mandi-sync.timer || true');
+      return { message: `Mandi sync timer is now ${stdout.trim()}.` };
+    },
+  },
+  {
     id: 'sync.status',
     group: 'State',
     label: 'Mandi sync timer status',

@@ -5,6 +5,14 @@ let snap = null;          // { state, options, actions }
 let tab = 'listings';
 let timer = null;
 let renderedOptions = '';   // the option lists the action forms were last built from
+let mode = 'console';
+let sheet = [];
+let stepRunning = false;
+// Ticks are the operator's place in the script, so they survive a reload mid-demo.
+const ticked = new Set(JSON.parse(localStorage.getItem('agrilink.runsheet') || '[]'));
+const saveTicks = () => {
+  try { localStorage.setItem('agrilink.runsheet', JSON.stringify([...ticked])); } catch { /* private window */ }
+};
 
 const api = async (url, body) => {
   const res = await fetch(url, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {});
@@ -164,6 +172,98 @@ function renderTable() {
     <tbody>${rows.map((r) => `<tr>${view.row(r).map((cell) => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
 }
 
+// ---------------------------------------------------------------- run sheet
+const PHASES = [['setup', 'Before you walk on'], ['act', 'The five minutes'], ['teardown', 'After / reset for another run']];
+
+async function loadSheet() {
+  try {
+    sheet = (await api('/api/runsheet')).steps;
+  } catch (err) {
+    $('#rs-steps').innerHTML = `<div class="empty">${esc(err.message)}</div>`;
+    return;
+  }
+  renderSheet();
+}
+
+function renderSheet() {
+  const acts = sheet.filter((s) => s.phase === 'act');
+  const done = acts.filter((s) => ticked.has(s.id)).length;
+  $('#rs-progress').textContent = `${done}/${acts.length} through the script`;
+  $('#rs-steps').innerHTML = PHASES.map(([phase, label]) => {
+    const list = sheet.filter((s) => s.phase === phase);
+    if (!list.length) return '';
+    return `<div class="phase">${esc(label)}</div>${list.map(renderStep).join('')}`;
+  }).join('');
+
+  for (const el of document.querySelectorAll('#rs-steps .tick')) {
+    el.addEventListener('click', () => {
+      const { id } = el.closest('.step').dataset;
+      if (ticked.has(id)) ticked.delete(id); else ticked.add(id);
+      saveTicks(); renderSheet();
+    });
+  }
+  for (const el of document.querySelectorAll('#rs-steps button[data-run]')) {
+    el.addEventListener('click', () => runStep(el.dataset.run, el));
+  }
+}
+
+function renderStep(s) {
+  const done = ticked.has(s.id);
+  const runnable = Boolean(s.action);
+  return `<div class="step ${done ? 'done' : ''}" data-id="${esc(s.id)}">
+    <button class="tick" title="tick this step">${done ? '✓' : ''}</button>
+    <div class="at">${esc(s.at || '')}</div>
+    <div>
+      <div class="title">${esc(s.title)} <span class="where ${esc(s.where)}">${esc(s.where)}</span>${s.optional ? ' <span class="tag">optional</span>' : ''}</div>
+      ${s.say ? `<div class="say">${esc(s.say)}</div>` : ''}
+      ${s.note ? `<div class="stepnote">${esc(s.note)}</div>` : ''}
+      ${runnable ? `<div class="row">
+        <button data-run="${esc(s.id)}" class="${s.blocked ? '' : 'primary'}" ${s.blocked ? 'disabled' : ''}>Run</button>
+        <span class="tag">${esc(s.action)}</span>
+        <span class="result" hidden></span>
+      </div>` : ''}
+      ${s.blocked ? `<div class="blocked">Cannot run: ${esc(s.blocked)}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+async function runStep(id, button) {
+  const step = sheet.find((s) => s.id === id);
+  const result = button.parentElement.querySelector('.result');
+  stepRunning = true;
+  button.disabled = true;
+  result.hidden = false;
+  result.className = 'result';
+  result.textContent = 'Running…';
+  try {
+    const out = await api(`/api/action/${step.action}`, step.params);
+    result.className = 'result ok';
+    result.textContent = out.message || 'Done.';
+    ticked.add(id); saveTicks();          // a step that ran is a step that happened
+    await loadSheet();                     // targets moved; re-resolve the rest
+  } catch (err) {
+    result.className = 'result err';
+    result.textContent = err.message;
+    button.disabled = false;
+  } finally {
+    stepRunning = false;
+  }
+  refreshStatus();
+}
+
+function setMode(next) {
+  mode = next;
+  $('#mode-console').classList.toggle('on', mode === 'console');
+  $('#mode-runsheet').classList.toggle('on', mode === 'runsheet');
+  $('#view-console').hidden = mode !== 'console';
+  $('#view-runsheet').hidden = mode !== 'runsheet';
+  if (mode === 'runsheet') loadSheet();
+}
+
+$('#mode-console').addEventListener('click', () => setMode('console'));
+$('#mode-runsheet').addEventListener('click', () => setMode('runsheet'));
+$('#rs-reset').addEventListener('click', () => { ticked.clear(); saveTicks(); renderSheet(); });
+
 // ---------------------------------------------------------------- boot
 async function load({ keepForms = false } = {}) {
   try {
@@ -188,6 +288,8 @@ async function load({ keepForms = false } = {}) {
     }
     renderTabs();
     renderTable();
+    // Never re-render the sheet out from under a step that is still running.
+    if (mode === 'runsheet' && !stepRunning) await loadSheet();
   } catch (err) {
     $('#actions').innerHTML = `<section><h2>Not connected</h2><div class="empty">${esc(err.message)}<br><br>
       Start the tunnel, then press Connect DB. Configuration lives in <code>dev/demoConsole/.env</code>.</div></section>`;

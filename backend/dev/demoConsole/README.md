@@ -29,6 +29,23 @@ ssh only carries the TCP port; no SQL is piped through a shell. Writes then take
 * **Mandi prices are written with SQL**, because the app has no write path for them (they arrive
   from the Agmarknet sync). Every price action is recorded in an in-session undo stack.
 
+## Run sheet
+
+The header switches between **Console** (the full action list) and **Run sheet** — the five-minute
+demo as an ordered checklist: what to say, which device you are on, and a Run button on the steps
+the laptop performs. Setup and teardown steps bracket the five minutes.
+
+Steps never store a uuid. A target is written the way a person would say it — "Ravi's rice
+listing", "the Banthara rice row", "the live offer between Meena and Ravi" — and `runsheet.js`
+resolves it against the current rows every time the sheet loads. If a target is gone, the step
+says why and its button is disabled, instead of failing under the lights. Running a step ticks it
+and re-resolves the rest; ticks are kept in the browser so a reload mid-demo does not lose your
+place.
+
+Edit `runsheet.js` to change the script. `steps` is plain data: `{ at, where, title, say, note,
+action, params }`, where `params` values are either literals or one of the reference forms
+(`user`, `listing`, `request`, `priceRow`, `liveOffer`, `deal`, `alert`).
+
 ## Actions
 
 | Group | What it does |
@@ -37,7 +54,7 @@ ssh only carries the TCP port; no SQL is piped through a shell. Writes then take
 | Prices | Move a crop's price by % · set one mandi price exactly · undo the last price change · flip the sample/live flag |
 | Accounts | Set a member's PIN (also clears a lockout) |
 | Alerts | Arm a price alert · run the alert check · re-arm a fired alert |
-| State | Refresh the demo data · sweep expired posts · delete all demo market data · snapshot the VM database · list snapshots · mandi sync timer status |
+| State | Refresh the demo data · sweep expired posts · delete all demo market data · snapshot the VM database · list snapshots · pause / resume / check the mandi sync timer |
 
 The forms are filled from the rows that exist on the VM right now, and whoever's turn it is in a
 negotiation is worked out from the standing revision — the console picks the right actor for you.

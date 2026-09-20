@@ -12,6 +12,8 @@
     font-synthesis: none;
   }
   * { box-sizing: border-box; }
+  /* `main` and `section` carry their own display, which would otherwise beat the [hidden] default. */
+  [hidden] { display: none !important; }
   body {
     margin: 0; background: var(--bg); color: var(--ink); font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
   }
@@ -69,6 +71,39 @@
   .log li b { color: var(--ink); font-weight: 600; }
   .log li.bad b { color: var(--bad); }
   .spacer { flex: 1; }
+  .modes { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .modes button { border: 0; border-radius: 0; }
+  .modes button.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+
+  /* ---- run sheet ---- */
+  #view-runsheet { margin: 16px; max-width: 880px; }
+  #view-runsheet > h2 {
+    display: flex; align-items: center; gap: 10px; margin: 0 0 12px; font-size: 13px;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+  }
+  #view-runsheet > h2 button.ghost { margin-left: auto; font-size: 11px; padding: 3px 8px; text-transform: none; letter-spacing: 0; }
+  .phase { margin: 18px 0 8px; color: var(--muted); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+  .step {
+    display: grid; grid-template-columns: 30px 54px 1fr; gap: 12px; align-items: start;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px; margin-bottom: 8px;
+  }
+  .step.done { opacity: .5; }
+  .step.done .title { text-decoration: line-through; }
+  .step .tick {
+    width: 22px; height: 22px; padding: 0; border-radius: 6px; line-height: 1;
+    display: grid; place-items: center; color: var(--muted);
+  }
+  .step.done .tick { background: var(--good); border-color: var(--good); color: var(--accent-ink); }
+  .step .at { color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 3px; }
+  .step .title { font-weight: 600; margin-bottom: 4px; }
+  .step .say { color: var(--ink); opacity: .85; margin-bottom: 6px; }
+  .step .say::before { content: '“'; } .step .say::after { content: '”'; }
+  .step .stepnote { color: var(--warn); font-size: 12px; margin-bottom: 6px; }
+  .step .where { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--panel-2); color: var(--muted); }
+  .step .where.phone { color: var(--accent); }
+  .step .blocked { color: var(--bad); font-size: 12px; margin-top: 6px; }
+  .step .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -79,12 +114,15 @@
   <span>key <span id="key" class="pill">…</span></span>
   <span id="host" class="pill"></span>
   <div class="spacer"></div>
+  <span class="modes">
+    <button id="mode-console" class="on">Console</button><button id="mode-runsheet">Run sheet</button>
+  </span>
   <button id="btn-tunnel">Start tunnel</button>
   <button id="btn-connect">Connect DB</button>
   <button id="btn-refresh" class="primary">Refresh</button>
   <label style="color:var(--muted)"><input type="checkbox" id="auto" style="width:auto" checked> auto 5s</label>
 </header>
-<main>
+<main id="view-console">
   <div id="actions"></div>
   <div>
     <section>
@@ -98,6 +136,11 @@
     </section>
   </div>
 </main>
+<section id="view-runsheet" hidden>
+  <h2>Five-minute demo <span id="rs-progress" class="tag"></span>
+    <button id="rs-reset" class="ghost">clear ticks</button></h2>
+  <div id="rs-steps"></div>
+</section>
 <script src="app.js"></script>
 </body>
 </html>

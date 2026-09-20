@@ -161,7 +161,8 @@ export function createPriceService(repo) {
     };
   }
 
-  async function getNetProfit({ crop, region, from, to, qty, lat, lng }) {
+  async function getNetProfit({ crop, region, from, to, qty, lat, lng,
+    transportMode = 'hired', channel = 'mandi', alreadyPacked = false, transitDays = null }) {
     const here = lat != null && lng != null ? { lat, lng } : null;
     const data = await getPrices({ crop, region, home: from, lat, lng });
     if (!data) return null;
@@ -170,8 +171,8 @@ export function createPriceService(repo) {
     const legacy = netProfit({ from: a, to: b, qty, here });
     const economics = (market) => market.distance_km == null ? null : calculateNetPrice({
       marketPrice: market.price, quantity: qty, distanceKm: market.distance_km,
-      transportMode: 'hired', transitDays: market.distance_km > 50 ? 1 : 0,
-      crop, channel: 'mandi',
+      transportMode, transitDays: transitDays == null ? (market.distance_km > 50 ? 1 : 0) : transitDays,
+      crop, channel, alreadyPacked,
     });
     const localEconomics = economics(a);
     const destinationEconomics = economics(b);

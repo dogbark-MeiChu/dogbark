@@ -21,3 +21,26 @@ export function legacyTransportModel(calc) {
     gainLabel: 'Net gain',
   };
 }
+
+/** Query parameters that make every TruePrice assumption explicit and server-authoritative. */
+export function truePriceAssumptionQuery(assumptions) {
+  const q = new URLSearchParams({
+    transportMode: assumptions.transportMode,
+    channel: assumptions.channel,
+    alreadyPacked: String(assumptions.alreadyPacked),
+  });
+  if (assumptions.transitDays != null) q.set('transitDays', String(assumptions.transitDays));
+  return q.toString();
+}
+
+/** Every cost deducted from net must also have a visible row in the UI. */
+export function truePriceCostTotals(economics, quantity) {
+  const b = economics.breakdown;
+  const qty = Number(quantity);
+  return {
+    transport: b.transport.total,
+    commissionFee: (b.commission.perQt + b.marketFee.perQt) * qty,
+    handlingPacking: (b.loading.perQt + b.weighing.perQt + b.packaging.perQt) * qty,
+    spoilage: b.spoilage.perQt * qty,
+  };
+}
