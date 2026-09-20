@@ -58,6 +58,8 @@ export default {
   "Area": "क्षेत्र",
   "Sort": "क्रमबद्ध करें",
   "Location": "स्थान",
+  "* Change location": "* स्थान बदलें",
+  "Choose location": "स्थान चुनें",
   "Community": "समुदाय",
   "Payment": "भुगतान",
   "Pickup": "लेने का समय",

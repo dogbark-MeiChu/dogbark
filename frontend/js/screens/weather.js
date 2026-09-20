@@ -57,8 +57,9 @@ export default {
     const [icon, label] = wmo(data.current.code);
     const head = el('', null);
     head.style.padding = 'var(--pad)';
+    const canChangeLocation = user.locations.length > 1;
     head.append(
-      el('', `📍 ${t(user.location.name)}  * ▸`),
+      el('', `📍 ${t(user.location.name)}${canChangeLocation ? ` · ${t('* Change location')}` : ''}`),
       el('big', `${data.current.temp}°C`),
       el('', `${icon} ${label} · ${t('Rain')} ${today.rain_prob}%`),
     );
@@ -101,9 +102,23 @@ export default {
   },
   onKey(action, ctx) {
     if (action === 'STAR') {
-      user.nextLocation();
-      data = null; error = null; tried = false; selectedDay = 0;
-      ctx.rerender();
+      const choices = user.locations;
+      if (choices.length <= 1) return true;
+      if (choices.length === 2) {
+        user.nextLocation();
+        data = null; error = null; tried = false; selectedDay = 0;
+        ctx.rerender();
+        return true;
+      }
+      ctx.router.push('ForumPicker', {
+        title: 'Choose location', selected: user.locationIndex,
+        options: choices.map((location, value) => ({ label: t(location.name), value })),
+        onPick(o, pickerCtx) {
+          user.selectLocation(o.value);
+          data = null; error = null; tried = false; selectedDay = 0;
+          pickerCtx.router.pop();
+        },
+      });
       return true;
     }
     if (['UP', 'DOWN', 'LEFT', 'RIGHT'].includes(action)) {

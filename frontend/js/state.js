@@ -25,16 +25,23 @@ function locations() {
   const home = p?.regionLat != null && p?.regionLng != null ? { name: p.regionName, lat: p.regionLat, lng: p.regionLng } : null;
   return home ? [home, ...LOCATIONS] : LOCATIONS;
 }
+function weatherLocations() { return override ? [override] : locations(); }
+function saveIndex(value) {
+  index = Math.max(0, Math.min(Number(value) || 0, weatherLocations().length - 1));
+  try { localStorage.setItem(KEY, String(index)); } catch { /* private mode etc. */ }
+}
 
 export const user = {
   // The configured CEDA import lives in this Postgres region. Profile data will
   // replace these defaults once authentication/location matching is available.
   region: 'IN-CEDA-S9-D136',
   homeMarket: 'ceda-680',
-  get location() { const list = locations(); return override || list[Math.min(index, list.length - 1)]; },
+  get locations() { return weatherLocations(); },
+  get locationIndex() { return Math.min(index, weatherLocations().length - 1); },
+  get location() { const list = weatherLocations(); return list[this.locationIndex]; },
+  selectLocation(next) { saveIndex(next); return this.location; },
   nextLocation() {
-    index = (Math.min(index, locations().length - 1) + 1) % locations().length;
-    try { localStorage.setItem(KEY, String(index)); } catch { /* private mode etc. */ }
+    saveIndex((this.locationIndex + 1) % weatherLocations().length);
     return this.location;
   },
 };

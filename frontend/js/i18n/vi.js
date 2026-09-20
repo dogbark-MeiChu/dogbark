@@ -58,6 +58,8 @@ export default {
   "Area": "Khu vực",
   "Sort": "Sắp xếp",
   "Location": "Vị trí",
+  "* Change location": "* Đổi vị trí",
+  "Choose location": "Chọn vị trí",
   "Community": "Cộng đồng",
   "Payment": "Thanh toán",
   "Pickup": "Nhận hàng",

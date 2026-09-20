@@ -58,6 +58,8 @@ export default {
   "Area": "এলাকা",
   "Sort": "সাজান",
   "Location": "অবস্থান",
+  "* Change location": "* অবস্থান বদলান",
+  "Choose location": "অবস্থান বেছে নিন",
   "Community": "সম্প্রদায়",
   "Payment": "পেমেন্ট",
   "Pickup": "সংগ্রহ",
