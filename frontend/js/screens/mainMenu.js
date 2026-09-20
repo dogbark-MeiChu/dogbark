@@ -2,9 +2,9 @@ import { t } from '../i18n/index.js';
 const ITEMS = [
   { label: 'Market Prices', to: 'MarketPrices' },
   { label: 'Sell / Buy', to: 'MarketHome' },
-  { label: 'Farmer Circle', to: 'FarmerCircleHome' },
-  { label: 'Ask AI', to: 'AskAIHome' },
   { label: "Today's Farm", to: 'FarmGate' },
+  { label: 'Ask AI', to: 'AskAIHome' },
+  { label: 'Farmer Circle', to: 'FarmerCircleHome' },
   { label: 'Weather', to: 'Weather' },
   { label: 'Settings', to: 'Settings' },
 ];
