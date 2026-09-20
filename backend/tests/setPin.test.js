@@ -69,3 +69,22 @@ test('the PIN is validated, the account must exist, and a no-op is refused', asy
     await rejects(() => t.auth.setPin({ phone: '9100000005', pin: PIN }), 'PIN_UNCHANGED');
   } finally { await t.close(); }
 });
+
+test('the signed-in change-PIN route verifies the old PIN, keeps this phone, and ends other sessions', async () => {
+  const t = await startForum();
+  try {
+    const current = await t.login('10000001');
+    const other = await t.login('10000001');
+    const denied = await current.post('/api/auth/change-pin', { currentPin: '000000', pin: '135790' });
+    assert.equal(denied.status, 401);
+    assert.equal(denied.body.error.code, 'INVALID_LOGIN');
+
+    const changed = await current.post('/api/auth/change-pin', { currentPin: PIN, pin: '135790' });
+    assert.equal(changed.status, 200);
+    assert.ok(changed.body.ended >= 1);
+    assert.ok((await current.get('/api/auth/session')).body.user, 'the phone changing the PIN stays signed in');
+    assert.equal((await other.get('/api/auth/session')).body.user, null, 'other phones are signed out');
+    await rejects(() => t.auth.login({ phone: '9100000001', pin: PIN }), 'INVALID_LOGIN');
+    await t.auth.login({ phone: '9100000001', pin: '135790' });
+  } finally { await t.close(); }
+});

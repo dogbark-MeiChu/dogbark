@@ -13,7 +13,10 @@ import askAIInput from './screens/askAIInput.js';
 import askAIThinking from './screens/askAIThinking.js';
 import askAIAnswer, { AskAISources } from './screens/askAIAnswer.js';
 import { AskAIMedia, AskAIPhoto, AskAIVoice, AskAIHistory } from './screens/askAIMedia.js';
-import { AuthWelcome, AuthPhone, AuthPin, ProfileName, ProfileVillage, ProfileRegion, AuthResult, Settings, ProfileSummary, LanguageSettings, CropSettings, WelcomeLanguage } from './screens/identity.js';
+import {
+  AuthWelcome, AuthPhone, AuthPin, ProfileName, ProfileVillage, ProfileRegion, AuthResult, Settings, ProfileSummary,
+  LanguageSettings, CropSettings, AccountSecurity, ChangePinCurrent, ChangePinNew, ChangePinConfirm, WelcomeLanguage,
+} from './screens/identity.js';
 import { getJSON } from './api.js';
 import { setLanguage } from './i18n/index.js';
 import { identity } from './state.js';
@@ -44,7 +47,8 @@ const screens = {
   Home: home, PriceAlerts, MainMenu: mainMenu, Weather: weather, MarketPrices: marketPrices, PriceDetail: priceDetail, ComingSoon: comingSoon,
   AskAIHome: askAIHome, AskAIInput: askAIInput, AskAIThinking: askAIThinking, AskAIAnswer: askAIAnswer,
   AskAISources, AskAIMedia, AskAIPhoto, AskAIVoice, AskAIHistory,
-  AuthWelcome, AuthPhone, AuthPin, ProfileName, ProfileVillage, ProfileRegion, AuthResult, Settings, ProfileSummary, LanguageSettings, CropSettings, WelcomeLanguage,
+  AuthWelcome, AuthPhone, AuthPin, ProfileName, ProfileVillage, ProfileRegion, AuthResult, Settings, ProfileSummary,
+  LanguageSettings, CropSettings, AccountSecurity, ChangePinCurrent, ChangePinNew, ChangePinConfirm, WelcomeLanguage,
   ...farmerCircle,
   MarketHome, MarketFeed, MarketFilter, MarketDetail, MarketForm, MarketNumber, MarketText, MarketOffers, MarketOffer, MarketDeals, MarketDeal, MarketReason, TradeConfirm,
   ...farmOpsScreens,

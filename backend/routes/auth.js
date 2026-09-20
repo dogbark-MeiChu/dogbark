@@ -39,6 +39,13 @@ export function authRouter({ auth, pool }) {
       return phone ? `phone:${phone}` : `ip:${ipKeyGenerator(req.ip)}`;
     },
   }));
+  router.use('/change-pin', rateLimit({
+    windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false, handler: tooMany,
+    keyGenerator: (req) => {
+      const sessionId = String(sessionFromRequest(req) || '').split('.')[0];
+      return sessionId ? `session:${sessionId}` : `ip:${ipKeyGenerator(req.ip)}`;
+    },
+  }));
   router.get('/options', async (_req, res, next) => {
     try {
       const [regions, crops] = await Promise.all([
@@ -74,6 +81,14 @@ export function authRouter({ auth, pool }) {
   });
   router.post('/logout-others', requireUser(auth), async (req, res, next) => {
     try { res.json({ ok: true, ended: await auth.logoutOthers(sessionFromRequest(req)) }); } catch (err) { next(err); }
+  });
+  router.post('/change-pin', requireUser(auth), async (req, res, next) => {
+    try {
+      const token = sessionFromRequest(req);
+      await auth.setPin({ userId: req.user.id, currentPin: req.body?.currentPin, pin: req.body?.pin, revokeSessions: false });
+      const ended = await auth.logoutOthers(token);
+      res.json({ ok: true, ended });
+    } catch (err) { next(err); }
   });
   router.patch('/profile', requireUser(auth), async (req, res, next) => {
     try {
